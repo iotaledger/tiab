@@ -1,4 +1,5 @@
 resource "aws_launch_configuration" "cluster_on_demand" {
+    name                        = "${var.name_prefix}"
     instance_type               = "${var.ec2_instance_type}"
     image_id                    = "${lookup(var.ecs_image_id, var.aws_region)}"
     iam_instance_profile        = "${var.instance_profile}"
@@ -34,7 +35,6 @@ resource "aws_autoscaling_group" "cluster" {
         create_before_destroy = true
     }
 }
-
 
 data "template_file" "autoscaling_user_data" {
     template = "${file("${path.module}/autoscaling_user_data.tpl")}"
