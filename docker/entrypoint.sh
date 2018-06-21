@@ -9,8 +9,7 @@ MEM_GB=$(printf %.1s $(free -m | tail -n+2 | head -n-1 | awk -F' ' '{ print $2 }
 
 exec java \
   $JAVA_OPTIONS \
-  -Xms$(expr $MEM_GB / 2) \
-  -Xmx$MEM_GB \
+  -Xms500M \
   -Djava.net.preferIPv4Stack=true \
   -Dcom.sun.management.jmxremote.* \
   -jar $DOCKER_IRI_JAR_PATH \
