@@ -60,6 +60,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=local_stage_build /iri/target/iri*.jar /iri/target/
+COPY jmx_prometheus_javaagent-0.3.1.jar /iri/
+COPY iri.ini /
 COPY entrypoint.sh /
 
 # Java related options. Defaults set as below
