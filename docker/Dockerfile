@@ -61,6 +61,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=local_stage_build /iri/target/iri*.jar /iri/target/
 COPY jmx_prometheus_javaagent-0.3.1.jar /iri/
+COPY jmx_prom_config.yaml /iri/conf/extras/
 COPY iri.ini /
 COPY entrypoint.sh /
 

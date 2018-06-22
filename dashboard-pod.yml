@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dashboard
+spec:
+  containers:
+
+  - name: prometheus
+    image: iotacafe/iota-prom-exporter:f5a331f-2
+    ports:
+    # Prometheus export port
+    - containerPort: 14700
+
+  - name: grafana
+    image: grafana/grafana
+    ports:
+    # WebUI
+    - containerPort: 3000

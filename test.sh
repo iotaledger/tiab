@@ -54,8 +54,14 @@ if [ -z $REPO_BRANCH ]; then REPO_BRANCH=dev; fi
 echo Thanks, building images...
 echo --------------------------
 
-rm -rf docker/iri
-git clone --depth 1 --branch $REPO_BRANCH $REPO_URL docker/iri
+if [ -d docker/iri ]; then
+  cd docker/iri
+  git fetch --all
+  git checkout origin/$REPO_BRANCH
+  cd ../..
+else
+  git clone --depth 1 --branch $REPO_BRANCH $REPO_URL docker/iri
+fi
 
 cd docker/iri
 REVISION=$(git rev-parse HEAD)
@@ -67,3 +73,12 @@ if [ $(curl -s -w "%{http_code}" https://registry.hub.docker.com/v2/repositories
   fi 
   docker push $DOCKER_REGISTRY:$REVISION 
 fi
+
+cd ..
+
+kubectl delete configmap configfiles
+kubectl create configmap configfiles --from-file configs
+
+sed "s/NUMBER_PLACEHOLDER/$FULL_NODES/" <iri-tanglescope-pods.yml |
+  sed "s/IRI_IMAGE_PLACEHOLDER/${DOCKER_REGISTRY//\//\\\/}:$REVISION/" |
+  kubectl create -f -

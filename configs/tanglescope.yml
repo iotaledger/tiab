@@ -1,0 +1,51 @@
+statscollector:
+  #IP/Port that the Prometheus Exposer binds to
+  prometheus_exposer_uri: "0.0.0.0:4444"
+  #URL of ZMQ publisher to connect to
+  publishers:
+      - "tcp://localhost:5556"
+
+  #interval to wait before starting publishing in milliseconds
+  pub_delay: 120000
+  #interval on which to publish to prometheus in milliseconds. You probably don't want to change this.
+  pub_interval: 1000
+
+  #histogram of bundle's confirmation duration granularity:
+  #(number of buckets = bundle_confirmation_histogram_range*1000 / bundle_confirmation_bucket_size)
+
+  #histogram's range  [seconds]
+  bundle_confirmation_histogram_range: 3600
+  #bucket's size [seconds]
+  bundle_confirmation_bucket_size: 300
+
+blowballcollector:
+  #IP/Port that the Prometheus Exposer binds to
+  prometheus_exposer_uri: "0.0.0.0:4445"
+  #URL of ZMQ publisher to connect to
+  publisher: "tcp://localhost:5556"
+
+  #interval between following snapshots (internal counters update)
+  snapshot_interval: 60
+  #histogram granularity configuration
+  #histogram's bucket's size (refcount of tx approvers)
+  bucket_size: 1
+  #histogram's range (maximum value of refcount to report)
+  histogram_range: 40
+
+tipselectioncollector:
+  #url of iri node
+  iri_host : "localhost"
+  iri_port: 14265
+  #IP / Port that the Prometheus Exposer binds to
+  prometheus_exposer_uri: "0.0.0.0:4446"
+  #depth to give to "getTransactionsToApprove"
+  depth: 10
+  #in - between samples interval[seconds]
+  sample_interval: 120
+  #of calls to getTransactionsToApprove in each sample
+  sample_size: 20
+  #histogram granularity configuration
+  #duration's histogram (time it took 'getTransactionsToApprove') bucket's size [ms]
+  duration_bucket_size: 100
+  #duration's histogram range (maximum time it took 'getTransactionsToApprove')
+  duration_histogram_range: 1000

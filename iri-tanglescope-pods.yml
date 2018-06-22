@@ -1,0 +1,43 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: iri-tanglescope
+spec:
+  replicas: NUMBER_PLACEHOLDER
+  template:
+    metadata:
+      labels:
+        app: iri
+    spec:
+      containers:
+
+      - name: iri
+        image: IRI_IMAGE_PLACEHOLDER
+        args: [ '-c', '/iri.ini' ]
+        ports:
+        # IRI ports
+        - containerPort: 14700
+        - containerPort: 15600
+        - containerPort: 14700
+          protocol: UDP
+        # JMX Prometheus
+        - containerPort: 5555
+        # ZMQ Feed
+        - containerPort: 5556
+
+      - name: tanglescope
+        image: iotacafe/entangled:tanglescope-0ad9e421-1
+        volumeMounts:
+          - name: tanglescope
+            subPath: tanglescope.yml
+            mountPath: /config.yml
+        ports:
+        # IRI ports
+        - containerPort: 4444
+        - containerPort: 4445
+        - containerPort: 4446
+
+      volumes:
+        - name: tanglescope
+          configMap:
+            name: configfiles
