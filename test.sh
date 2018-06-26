@@ -79,6 +79,8 @@ cd ..
 kubectl delete configmap configfiles
 kubectl create configmap configfiles --from-file configs
 
-sed "s/NUMBER_PLACEHOLDER/$FULL_NODES/" <iri-tanglescope-pods.yml |
+sed "s/NUMBER_PLACEHOLDER/$NODE_NUMBER/" <iri-tanglescope-pods.yml |
   sed "s/IRI_IMAGE_PLACEHOLDER/${DOCKER_REGISTRY//\//\\\/}:$REVISION/" |
   kubectl create -f -
+
+

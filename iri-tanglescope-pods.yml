@@ -13,11 +13,13 @@ spec:
 
       - name: iri
         image: IRI_IMAGE_PLACEHOLDER
+        imagePullPolicy: Always
         args: [ '-c', '/iri.ini' ]
         ports:
-        # IRI ports
+        # IRI API
+        - containerPort: 14265
+        # IRI Gossip
         - containerPort: 14700
-        - containerPort: 15600
         - containerPort: 14700
           protocol: UDP
         # JMX Prometheus
@@ -32,7 +34,7 @@ spec:
             subPath: tanglescope.yml
             mountPath: /config.yml
         ports:
-        # IRI ports
+        # Exporter
         - containerPort: 4444
         - containerPort: 4445
         - containerPort: 4446

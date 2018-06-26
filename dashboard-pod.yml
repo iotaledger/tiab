@@ -2,17 +2,41 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: dashboard
+  labels:
+    app: grafana
 spec:
   containers:
 
   - name: prometheus
     image: iotacafe/iota-prom-exporter:f5a331f-2
+    env:
+    - name: IRI_URL
+      value: "http://127.0.0.1:14265" # This is wrong, it lies in another pod
+    - name: BIND_PORT
+      value: "3001"
+    - name: ZMQ_URL
+      value: "127.0.0.1:5556"
     ports:
     # Prometheus export port
-    - containerPort: 14700
+    - containerPort: 3001
 
   - name: grafana
     image: grafana/grafana
     ports:
     # WebUI
     - containerPort: 3000
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: grafana
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+  selector:
+    app: grafana
+  type: LoadBalancer
