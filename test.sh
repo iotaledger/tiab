@@ -2,6 +2,7 @@
 
 DOCKER_REGISTRY=karimo/iri-network-tests
 
+echo --------------------------
 echo -n "How many nodes do you want?
 > "
 read NODE_NUMBER
@@ -67,6 +68,10 @@ cd docker/iri
 REVISION=$(git rev-parse HEAD)
 cd ..
 
+echo --------------------------
+echo "Deploying revision $REVISION"
+echo --------------------------
+
 if [ $(curl -s -w "%{http_code}" https://registry.hub.docker.com/v2/repositories/$DOCKER_REGISTRY/tags/$REVISION/ -o /dev/null) != '200' ]; then
   if [ $(docker images | grep $DOCKER_REGISTRY | grep -c $REVISION) -eq 0 ]; then
     docker build -t $DOCKER_REGISTRY:$REVISION .
@@ -76,11 +81,48 @@ fi
 
 cd ..
 
-kubectl delete configmap configfiles
-kubectl create configmap configfiles --from-file configs
+kubectl create configmap tanglescope-$REVISION --from-file configs/tanglescope.yml
+cat \
+  <(kubectl get configmap tanglescope-$REVISION -o json) \
+  <(echo '{ "metadata": { "labels": { "revision": "'$REVISION'" } } }') |
+  jq -s '.[0] * .[1]' |
+kubectl replace -f -
 
-sed "s/NUMBER_PLACEHOLDER/$NODE_NUMBER/" <iri-tanglescope-pods.yml |
+sed "s/NUMBER_PLACEHOLDER/$NODE_NUMBER/" <iri-tanglescope-deployment.yml |
   sed "s/IRI_IMAGE_PLACEHOLDER/${DOCKER_REGISTRY//\//\\\/}:$REVISION/" |
+  sed "s/REVISION_PLACEHOLDER/$REVISION/g" |
   kubectl create -f -
 
+IRI_TARGETS_JSON=$(mktemp)
+PROMETHEUS_CONFIG_DIR=$(mktemp -d)
 
+echo --------------------------
+echo "Waiting until IRIs are healthy"
+echo --------------------------
+
+while kubectl get pods -l revision=$REVISION | tail -n+2 | grep -v Running >/dev/null; do
+  sleep 5
+done
+
+kubectl get pods -l revision=$REVISION -o json | jq '{ iri_targets: [ .items[].status.podIP ] } ' >$IRI_TARGETS_JSON
+
+j2 -f json configs/templates/prometheus.j2 $IRI_TARGETS_JSON >$PROMETHEUS_CONFIG_DIR/prometheus.yml
+
+kubectl create configmap prometheus-$REVISION --from-file $PROMETHEUS_CONFIG_DIR/prometheus.yml
+cat \
+  <(kubectl get configmap prometheus-$REVISION -o json) \
+  <(echo '{ "metadata": { "labels": { "revision": "'$REVISION'" } } }') |
+  jq -s '.[0] * .[1]' |
+kubectl replace -f -
+
+sed "s/REVISION_PLACEHOLDER/$REVISION/g" prometheus-grafana-pod.yml |
+  kubectl create -f -
+
+sed "s/REVISION_PLACEHOLDER/$REVISION/g" prometheus-grafana-service.yml |
+  kubectl create -f -
+
+LB_ENDPOINT=$(kubectl get service grafana-$REVISION -o json | jq '.items[0].status.loadBalancer.ingress[0].hostname')
+
+echo --------------------------
+echo "You can now connect to http://$LB_ENDPOINT with admin:admin"
+echo --------------------------

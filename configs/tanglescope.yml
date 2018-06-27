@@ -2,8 +2,7 @@ statscollector:
   #IP/Port that the Prometheus Exposer binds to
   prometheus_exposer_uri: "0.0.0.0:4444"
   #URL of ZMQ publisher to connect to
-  publishers:
-      - "tcp://localhost:5556"
+  publisher: "tcp://localhost:5556"
 
   #interval to wait before starting publishing in milliseconds
   pub_delay: 120000
@@ -49,3 +48,23 @@ tipselectioncollector:
   duration_bucket_size: 100
   #duration's histogram range (maximum time it took 'getTransactionsToApprove')
   duration_histogram_range: 1000
+
+tanglewidthcollector:
+  #IP / Port that the Prometheus Exposer binds to
+  prometheus_exposer_uri: "0.0.0.0:4447"
+  #The measure line base from the above definition, [seconds]
+  measure_line_base_age: 30
+  #The measure line max age [seconds]
+  measure_line_max_age: 90
+  #Step from measure_line_base_age to measure_line_max_age, [seconds]
+  measure_line_age_step: 10
+  #interval between following snapshots (internal counters update)
+  snapshot_interval: 10
+
+dbloader:
+  #URL of ZMQ publisher to connect to
+  publisher: "tcp://localhost:5556"
+  #TX's older than that age will be removed each cleanup_interval [seconds]
+  oldest_tx_age: 1800
+  #in - between cleanup interval[seconds]
+  cleanup_interval: 60

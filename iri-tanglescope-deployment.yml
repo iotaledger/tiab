@@ -1,13 +1,15 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: iri-tanglescope
+  name: iri-tanglescope-REVISION_PLACEHOLDER
+  labels:
+    revision: REVISION_PLACEHOLDER
 spec:
   replicas: NUMBER_PLACEHOLDER
   template:
     metadata:
       labels:
-        app: iri
+        revision: REVISION_PLACEHOLDER
     spec:
       containers:
 
@@ -28,7 +30,7 @@ spec:
         - containerPort: 5556
 
       - name: tanglescope
-        image: iotacafe/entangled:tanglescope-0ad9e421-1
+        image: iotacafe/entangled:tanglescope-41fa5ab-1
         volumeMounts:
           - name: tanglescope
             subPath: tanglescope.yml
@@ -38,8 +40,9 @@ spec:
         - containerPort: 4444
         - containerPort: 4445
         - containerPort: 4446
+        - containerPort: 4447
 
       volumes:
         - name: tanglescope
           configMap:
-            name: configfiles
+            name: tanglescope-REVISION_PLACEHOLDER
