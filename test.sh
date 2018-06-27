@@ -121,8 +121,20 @@ sed "s/REVISION_PLACEHOLDER/$REVISION/g" prometheus-grafana-pod.yml |
 sed "s/REVISION_PLACEHOLDER/$REVISION/g" prometheus-grafana-service.yml |
   kubectl create -f -
 
-LB_ENDPOINT=$(kubectl get service grafana-$REVISION -o json | jq '.items[0].status.loadBalancer.ingress[0].hostname')
-
 echo --------------------------
+echo "Waiting until Grafana is healthy"
+
+while kubectl get pods -l app=grafana,revision=$REVISION | tail -n+2 | grep -v Running >/dev/null; do
+  sleep 5
+done
+
+LB_ENDPOINT=$(kubectl get service grafana-$REVISION -o json | jq -r '.status.loadBalancer.ingress[0].hostname')
+
+while ! curl \
+  -o /dev/null -s "http://$LB_ENDPOINT/api/datasources" --user admin:admin -H 'X-Grafana-Org-Id: 1' -H 'Content-Type: application/json;charset=UTF-8' --data-binary '{"name":"Prometheus","isDefault":true,"type":"prometheus","url":"http://localhost:9090","access":"proxy","jsonData":{"keepCookies":[],"httpMethod":"GET"},"secureJsonFields":{}}'
+do
+  sleep 1
+done
+
 echo "You can now connect to http://$LB_ENDPOINT with admin:admin"
 echo --------------------------
