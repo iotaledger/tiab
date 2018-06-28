@@ -3,6 +3,7 @@ Automation to stress-test IRI algorithms and network.
 
 ## System Dependencies
 
+* curl
 * git
 * jq
 * j2cli

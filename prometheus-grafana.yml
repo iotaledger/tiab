@@ -28,3 +28,21 @@ spec:
   - name: prometheus
     configMap:
       name: prometheus-REVISION_PLACEHOLDER
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-REVISION_PLACEHOLDER
+  labels:
+    app: grafana
+    revision: REVISION_PLACEHOLDER
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+  selector:
+    app: grafana
+    revision: REVISION_PLACEHOLDER
+  type: LoadBalancer

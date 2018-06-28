@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: iri-tanglescope-REVISION_PLACEHOLDER-NODE_NUMBER_PLACEHOLDER
+  labels:
+    app: iri
+    nodenum: "NODE_NUMBER_PLACEHOLDER"
+    full: ISFULL_PLACEHOLDER
+    revision: REVISION_PLACEHOLDER
+spec:
+  containers:
+
+  - name: iri
+    image: IRI_IMAGE_PLACEHOLDER
+    imagePullPolicy: Always
+    args: [ '-c', '/iri.ini' ]
+    env:
+    - name: IRI_DB_URL
+      value: IRI_DB_URL_PLACEHOLDER
+    ports:
+    # IRI API
+    - containerPort: 14265
+    # IRI Gossip
+    - containerPort: 14700
+    - containerPort: 14700
+      protocol: UDP
+    # JMX Prometheus
+    - containerPort: 5555
+    # ZMQ Feed
+    - containerPort: 5556
+
+  - name: tanglescope
+    image: iotacafe/entangled:tanglescope-41fa5ab-1
+    volumeMounts:
+      - name: tanglescope
+        subPath: tanglescope.yml
+        mountPath: /config.yml
+    ports:
+    # Exporter
+    - containerPort: 4444
+    - containerPort: 4445
+    - containerPort: 4446
+    - containerPort: 4447
+
+  volumes:
+    - name: tanglescope
+      configMap:
+        name: tanglescope-REVISION_PLACEHOLDER
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iri-REVISION_PLACEHOLDER-NODE_NUMBER_PLACEHOLDER
+  labels:
+    app: iri
+    nodenum: "NODE_NUMBER_PLACEHOLDER"
+    full: ISFULL_PLACEHOLDER
+    revision: REVISION_PLACEHOLDER
+
+spec:
+  ports:
+    - name: api
+      port: 14265
+      targetPort: 14265
+  selector:
+    app: iri
+    nodenum: "NODE_NUMBER_PLACEHOLDER"
+    full: ISFULL_PLACEHOLDER
+    revision: REVISION_PLACEHOLDER
+  type: LoadBalancer
