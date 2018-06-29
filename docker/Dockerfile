@@ -24,7 +24,7 @@ ARG SHA=b52956373fab1dd4277926507ab189fb797b3bc51a2a267a193c931fffad8408
 ARG BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl \
+        curl wget \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /usr/share/maven /usr/share/maven/ref \

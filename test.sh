@@ -113,6 +113,17 @@ function all_to_all_topology {
   done
 }
 
+function wait_until_iri_api_healthy {
+  local NODE_API=$1
+  while ! curl -s -o /dev/null http://$NODE_API:14265 \
+    -X POST \
+    -H 'Content-Type: application/json' \
+    -H 'X-IOTA-API-Version: 1' \
+    -d '{"command": "getNodeInfo"}'; do
+    sleep 5
+  done
+}
+
 if [ -d docker/iri ]; then
   cd docker/iri
   git fetch --all
@@ -173,7 +184,7 @@ IRI_TARGETS_JSON_FILE=$(mktemp)
 PROMETHEUS_CONFIG_DIR=$(mktemp -d)
 
 echo --------------------------
-echo "Waiting until IRIs are healthy"
+echo "Waiting until IRIs pods are up"
 echo --------------------------
 
 while kubectl get pods -l revision=$REVISION | tail -n+2 | grep -v Running >/dev/null; do
@@ -202,7 +213,7 @@ while kubectl get pods -l app=grafana,revision=$REVISION | tail -n+2 | grep -v R
 done
 
 LB_ENDPOINT=$(kubectl get service grafana-$REVISION -o json | jq -r '.status.loadBalancer.ingress[0].hostname')
-while [ $LB_ENDPOINT = 'null' -o -z $LB_ENDPOINT]; do
+while [ $LB_ENDPOINT = 'null' -o -z $LB_ENDPOINT ]; do
   LB_ENDPOINT=$(kubectl get service grafana-$REVISION -o json | jq -r '.status.loadBalancer.ingress[0].hostname')
 done
 
@@ -219,6 +230,12 @@ echo "IRI API Endpoints:"
 for i in "${!IRI_APIS[@]}"; do
   echo -e "\t - http://${IRI_APIS[$i]}:14265"
 done
+
+echo "Waiting until IRIs are healthy"
+for iri_api in "${IRI_APIS[@]}"; do
+  wait_until_iri_api_healthy $iri_api
+done
+
 echo "Configuring nodes topology..."
 
 IFS=' ' read -a IRI_IPS <<<$(jq -r '.iri_targets | join(" ")' <$IRI_TARGETS_JSON_FILE)
