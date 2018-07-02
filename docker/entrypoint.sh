@@ -15,7 +15,7 @@ fi
 
 exec java \
   $JAVA_OPTIONS \
-  -Xms500M \
+  -Xms$JAVA_MIN_MEMORY \
   -Djava.net.preferIPv4Stack=true \
   -Dcom.sun.management.jmxremote.* \
   -javaagent:/iri/jmx_prometheus_javaagent-0.3.1.jar=5555:/iri/conf/extras/jmx_prom_config.yaml \

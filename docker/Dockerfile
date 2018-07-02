@@ -56,8 +56,14 @@ RUN mvn clean package
 FROM local_stage_java
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        jq curl socat \
+        jq curl wget socat \
     && rm -rf /var/lib/apt/lists/*
+
+# JProfiler stuff
+ENV JPROFILER_VERSION=10.1.2
+RUN wget https://download-keycdn.ej-technologies.com/jprofiler/jprofiler_linux_10_1_2.tar.gz -O /tmp/jprofiler.tar.gz && \
+ tar -xzf /tmp/jprofiler.tar.gz -C /usr/local && \
+ rm /tmp/jprofiler.tar.gz
 
 COPY --from=local_stage_build /iri/target/iri*.jar /iri/target/
 COPY jmx_prometheus_javaagent-0.3.1.jar /iri/
@@ -66,7 +72,7 @@ COPY iri.ini /
 COPY entrypoint.sh /
 
 # Java related options. Defaults set as below
-ENV JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+DisableAttachMechanism -XX:InitiatingHeapOccupancyPercent=60 -XX:G1MaxNewSizePercent=75 -XX:MaxGCPauseMillis=10000 -XX:+UseG1GC"
+ENV JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+DisableAttachMechanism -XX:InitiatingHeapOccupancyPercent=60 -XX:G1MaxNewSizePercent=75 -XX:MaxGCPauseMillis=10000 -XX:+UseG1GC -agentpath:/usr/local/jprofiler$JPROFILER_VERSION/bin/linux-x64/libjprofilerti.so=port=8849,nowait,config=/usr/local/jprofiler$JPROFILER_VERSION/config.xml"
 ENV JAVA_MIN_MEMORY 2G
 ENV JAVA_MAX_MEMORY 4G
 

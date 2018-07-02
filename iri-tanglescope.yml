@@ -28,6 +28,8 @@ spec:
     - containerPort: 5555
     # ZMQ Feed
     - containerPort: 5556
+    # JProfiler
+    - containerPort: 8849
 
   - name: tanglescope
     image: iotacafe/entangled:tanglescope-41fa5ab-1
@@ -63,6 +65,9 @@ spec:
     - name: api
       port: 14265
       targetPort: 14265
+    - name: jprofiler
+      port: 8849
+      targetPort: 8849
   selector:
     app: iri
     nodenum: "NODE_NUMBER_PLACEHOLDER"
