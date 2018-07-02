@@ -7,7 +7,7 @@ if [ $DEBUG -eq 1 ]; then
 fi
 
 DOCKER_REGISTRY=karimo/iri-network-tests
-IRI_DB_URL=https://s3.eu-central-1.amazonaws.com/iotaledger-dbfiles/testnet/db-latest.tgz
+IRI_DB_URL=https://dbfiles.iota.org/testnet/db-latest.tgz
 
 echo --------------------------
 echo -n "How many nodes do you want?
