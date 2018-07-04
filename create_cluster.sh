@@ -10,7 +10,7 @@ PROTOCOL=
 REPO_URL=https://github.com/iotaledger/iri.git
 REPO_BRANCH=dev
 DOCKER_REGISTRY=karimo/iri-network-tests
-IRI_DB_URL=https://dbfiles.iota.org/testnet/db-latest.tgz
+IRI_DB_URL=https://s3.eu-central-1.amazonaws.com/iotaledger-dbfiles/dev/testnet_files.tgz
 API_PORT=14265
 GOSSIP_TCP_PORT=14700
 GOSSIP_UDP_PORT=14700
@@ -286,7 +286,7 @@ fi
 print_message "All done bro!"
 print_message --------------------------
 
-if [ $MACHINE_OUTPUT = 1 ]; then
+if [ $MACHINE_OUTPUT -eq 1 ]; then
   {
     printf '{"iris": ['
     for i in $(seq 0 $((${#IRI_APIS[@]} - 1))); do
