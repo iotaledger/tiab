@@ -114,7 +114,7 @@ function wait_until_iri_api_healthy {
   done
 }
 
-OPTS=$(getopt -o n:s:f:t:p:r:b:dma:g:u: --long number:,scenario:,fullnodes-number:,topology:,protocol:,repository:,branch:,debug,machine-output,api-port:,gossip-tcp:,gossip-udp: -- "$@")
+OPTS=$(getopt -o n:s:f:t:p:r:b:dm --long number:,scenario:,fullnodes-number:,topology:,protocol:,repository:,branch:,debug,machine-output -- "$@")
 
 if [ $? -ne 0 ]; then
   usage
@@ -143,12 +143,6 @@ while true; do
       REPO_URL=$2 ; shift 2 ;;
     -b|--branch)
       REPO_BRANCH=$2 ; shift 2 ;;
-    -a|--api-port)
-      API_PORT=$2 ; shift 2 ;;
-    -g|--gossip-tcp)
-      GOSSIP_TCP_PORT=$2 ; shift 2 ;;
-    -u|--gossip-udp)
-      GOSSIP_UDP_PORT=$2 ; shift 2 ;;
     --)
       shift ; break ;;
     *)
@@ -186,21 +180,14 @@ print_message --------------------------
 
 if [ $(curl -s -w "%{http_code}" https://registry.hub.docker.com/v2/repositories/$DOCKER_REGISTRY/tags/$REVISION/ -o /dev/null) != '200' ]; then
   if [ $(docker images | grep $DOCKER_REGISTRY | grep -c $REVISION) -eq 0 ]; then
-    sed "s/API_PORT_PLACEHOLDER/$API_PORT/g" <Dockerfile |
-      docker build -f - -t $DOCKER_REGISTRY:$REVISION .
+    docker build -t $DOCKER_REGISTRY:$REVISION .
   fi 
   docker push $DOCKER_REGISTRY:$REVISION 
 fi
 
 cd ..
 
-IRI_TARGETS_JSON_FILE=$(mktemp)
-PROMETHEUS_CONFIG_DIR=$(mktemp -d)
-TANGLESCOPE_CONFIG_DIR=$(mktemp -d)
-
-sed "s/API_PORT_PLACEHOLDER/$API_PORT/g" <configs/tanglescope.yml >$TANGLESCOPE_CONFIG_DIR/tanglescope.yml
-kubectl create configmap tanglescope-$REVISION --from-file $TANGLESCOPE_CONFIG_DIR/tanglescope.yml
-
+kubectl create configmap tanglescope-$REVISION --from-file configs/tanglescope.yml
 cat \
   <(kubectl get configmap tanglescope-$REVISION -o json) \
   <(echo '{ "metadata": { "labels": { "revision": "'$REVISION'" } } }') |
@@ -219,9 +206,6 @@ for node_num in $(seq 1 $NODE_NUMBER); do
       sed "s/REVISION_PLACEHOLDER/$REVISION/g" |
       sed 's/ISFULL_PLACEHOLDER/"true"/g' |
       sed "s#IRI_DB_URL_PLACEHOLDER#$IRI_DB_URL#g" |
-      sed "s/API_PORT_PLACEHOLDER/$API_PORT/g" |
-      sed "s/GOSSIP_TCP_PORT_PLACEHOLDER/$GOSSIP_TCP_PORT/g" |
-      sed "s/GOSSIP_UDP_PORT_PLACEHOLDER/$GOSSIP_UDP_PORT/g" |
       kubectl create -f -
   else
     sed "s/NODE_NUMBER_PLACEHOLDER/$node_num/" <iri-tanglescope.yml |
@@ -229,12 +213,12 @@ for node_num in $(seq 1 $NODE_NUMBER); do
       sed "s/REVISION_PLACEHOLDER/$REVISION/g" |
       sed 's/ISFULL_PLACEHOLDER/"false"/g' |
       sed 's#IRI_DB_URL_PLACEHOLDER#""#g' |
-      sed "s/API_PORT_PLACEHOLDER/$API_PORT/g" |
-      sed "s/GOSSIP_TCP_PORT_PLACEHOLDER/$GOSSIP_TCP_PORT/g" |
-      sed "s/GOSSIP_UDP_PORT_PLACEHOLDER/$GOSSIP_UDP_PORT/g" |
       kubectl create -f -
   fi
 done
+
+IRI_TARGETS_JSON_FILE=$(mktemp)
+PROMETHEUS_CONFIG_DIR=$(mktemp -d)
 
 print_message --------------------------
 print_message "Waiting until IRIs pods are up"

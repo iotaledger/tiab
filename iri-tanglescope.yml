@@ -15,11 +15,11 @@ spec:
     imagePullPolicy: Always
     args:
     - "--port"
-    - "API_PORT_PLACEHOLDER"
+    - "14265"
     - "--tcp-receiver-port"
-    - "GOSSIP_TCP_PORT_PLACEHOLDER"
+    - "14700"
     - "--udp-receiver-port"
-    - "GOSSIP_UDP_PORT_PLACEHOLDER"
+    - "14700"
     - "--testnet"
     - "--testnet-coordinator"
     - "BTCAAFIH9CJIVIMWFMIHKFNWRTLJRKSTMRCVRE9CIP9AEDTOULVFRHQZT9QAQBZXXAZGBNMVOOKTKAXTB"
@@ -33,10 +33,10 @@ spec:
       value: IRI_DB_URL_PLACEHOLDER
     ports:
     # IRI API
-    - containerPort: API_PORT_PLACEHOLDER
+    - containerPort: 14265
     # IRI Gossip
-    - containerPort: GOSSIP_TCP_PORT_PLACEHOLDER
-    - containerPort: GOSSIP_UDP_PORT_PLACEHOLDER
+    - containerPort: 14700
+    - containerPort: 14700
       protocol: UDP
     # JMX Prometheus
     - containerPort: 5555
@@ -77,8 +77,8 @@ metadata:
 spec:
   ports:
     - name: api
-      port: API_PORT_PLACEHOLDER
-      targetPort: API_PORT_PLACEHOLDER
+      port: 14265
+      targetPort: 14265
     - name: jprofiler
       port: 8849
       targetPort: 8849
