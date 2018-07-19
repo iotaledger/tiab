@@ -23,7 +23,7 @@ class Struct:
 
 def print_message(s):
     if debug:
-        print('[+] %s' % s)
+        print('[+] %s' % s.rstrip())
 
 def die(s):
     print(s, file = sys.stderr)
@@ -165,7 +165,13 @@ if __name__ == '__main__':
             docker_client.images.get('%s:%s' % (docker_registry, revision_hash))
         except docker.errors.ImageNotFound:
             print_message("Building docker image")
-            docker_client.images.build(path = 'docker', tag = '%s:%s' % (docker_registry, revision_hash)) 
+            for line in docker_client.api.build(path = 'docker', tag = '%s:%s' % (docker_registry, revision_hash)):
+                try:
+                    print_message(json.loads(line)['stream'])
+                except KeyError:
+                    import ipdb; ipdb.set_trace()
+                    print_message(json.loads(line)['aux']['Digest'])
+
         print_message("Pushing docker image to %s" % docker_registry)
         for line in docker_client.images.push(docker_registry, revision_hash, stream = True):
             try:
