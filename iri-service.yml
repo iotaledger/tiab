@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iri-REVISION_PLACEHOLDER-NODE_NUMBER_PLACEHOLDER
+  labels:
+    app: iri
+    nodenum: "NODE_NUMBER_PLACEHOLDER"
+    full: ISFULL_PLACEHOLDER
+    revision: REVISION_PLACEHOLDER
+
+spec:
+  ports:
+    - name: api
+      port: 14265
+      targetPort: 14265
+    - name: gossip-tcp
+      port: 15600
+      targetPort: 15600
+    - name: gossip-udp
+      port: 14600
+      targetPort: 14600
+      protocol: UDP
+    - name: jmx-prometheus
+      port: 5555
+      targetPort: 5555
+    - name: zmq-feed
+      port: 5556
+      targetPort: 5556
+    - name: jprofiler
+      port: 8849
+      targetPort: 8849
+  selector:
+    app: iri
+    nodenum: "NODE_NUMBER_PLACEHOLDER"
+    full: ISFULL_PLACEHOLDER
+    revision: REVISION_PLACEHOLDER
+  type: NodePort

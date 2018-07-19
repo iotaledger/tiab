@@ -1,0 +1,49 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: iri-REVISION_PLACEHOLDER-NODE_NUMBER_PLACEHOLDER
+  labels:
+    app: iri
+    nodenum: "NODE_NUMBER_PLACEHOLDER"
+    full: ISFULL_PLACEHOLDER
+    revision: REVISION_PLACEHOLDER
+spec:
+  containers:
+
+  - name: iri
+    image: IRI_IMAGE_PLACEHOLDER
+    imagePullPolicy: Always
+    args:
+    - "--port"
+    - "14265"
+    - "--tcp-receiver-port"
+    - "15600"
+    - "--udp-receiver-port"
+    - "14600"
+    - "--testnet"
+    - "--testnet-coordinator"
+    - "BTCAAFIH9CJIVIMWFMIHKFNWRTLJRKSTMRCVRE9CIP9AEDTOULVFRHQZT9QAQBZXXAZGBNMVOOKTKAXTB"
+    - "--testnet-no-coo-validation"
+    - "--milestone-start"
+    - "0"
+    - "--snapshot"
+    - "/iri/data/snapshot.txt"
+    env:
+    - name: IRI_DB_URL
+      value: IRI_DB_URL_PLACEHOLDER
+    - name: IRI_DB_CHECKSUM
+      value: IRI_DB_CHECKSUM_PLACEHOLDER
+    ports:
+    # IRI API
+    - containerPort: 14265
+    # IRI Gossip
+    - containerPort: 15600
+    - containerPort: 14600
+      protocol: UDP
+    # JMX Prometheus
+    - containerPort: 5555
+    # ZMQ Feed
+    - containerPort: 5556
+    # JProfiler
+    - containerPort: 8849
