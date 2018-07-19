@@ -1,4 +1,3 @@
--s--
 apiVersion: v1
 kind: Pod
 metadata:
@@ -15,6 +14,9 @@ spec:
   - name: iri
     image: IRI_IMAGE_PLACEHOLDER
     imagePullPolicy: Always
+    livenessProbe:
+      tcpSocket:
+        port: 14265
     args:
     - "--port"
     - "14265"

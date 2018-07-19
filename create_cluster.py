@@ -21,13 +21,21 @@ class Struct:
     def __init__(self, **entries):
         self.__dict__.update(entries)
 
+def print_message(s):
+    if debug:
+        print('[+] %s' % s)
+
 def die(s):
     print(s, file = sys.stderr)
     sys.exit(2)
 
-def print_message(s):
-    if debug:
-        print('[+] %s' % s)
+def success(nodesinfo):
+    print(yaml.dump(nodesinfo, default_flow_style = False))
+    sys.exit(0)
+
+def fail(nodesinfo):
+    print(yaml.dump(nodesinfo, default_flow_style = False))
+    sys.exit(2)
 
 def usage():
     die('''     %s [-r iri repository] [-b iri branch] [-d --debug] -c cluster.yml
@@ -120,12 +128,13 @@ def deep_map(obj, func):
 def fill_template_property(template, placeholder, value):
     return deep_map(template, lambda s: s.replace(placeholder, value) if isinstance(s, str) else s)
 
-def wait_until_running_pod(kubernetes_client, pod_name, namespace):
-    while True:
+def wait_until_running_pod(kubernetes_client, namespace, pod_name, timeout = 60):
+    for _ in range(0, timeout):
         pod = kubernetes_client.read_namespaced_pod(pod_name, namespace)
         if pod.status.phase == 'Running':
             return pod
         time.sleep(1)
+    raise RuntimeError('Pod is taking too long to get into "Running" state')
 
 repository = 'https://github.com/iotaledger/iri.git'
 branch = 'dev'
@@ -133,6 +142,7 @@ docker_registry = 'karimo/iri-network-tests'
 debug = False
 cluster = None
 nodesinfo = {}
+healthy = True
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -165,7 +175,7 @@ if __name__ == '__main__':
 
     print_message("Initializing kubernetes client library against cluster")
     kubernetes_client = init_k8s_client()
-    with open('iri.yml', 'r') as stream:
+    with open('iri-pod.yml', 'r') as stream:
         iri_pod_template = yaml.load(stream)
     with open('iri-service.yml', 'r') as stream:
         iri_service_template = yaml.load(stream)
@@ -190,7 +200,18 @@ if __name__ == '__main__':
         nodesinfo[node]['ports'] = { p.name: p.node_port for p in service.spec.ports }
 
     for node in cluster.nodes.keys():
-        pod = wait_until_running_pod(kubernetes_client, pod.metadata.name, 'default')
-        nodesinfo[node]['host'] = pod.status.host_ip
+        try:
+            pod = wait_until_running_pod(kubernetes_client, 'default', nodesinfo[node]['podname'])
+        except RuntimeError:
+            healthy = False
+            nodesinfo[node]['status'] = 'Error'
+        else:
+            nodesinfo[node]['host'] = pod.status.host_ip
+            nodesinfo[node]['status'] = 'Running'
+        finally:
+            nodesinfo[node]['log'] = kubernetes_client.read_namespaced_pod_log(nodesinfo[node]['podname'], 'default', pretty = True)
 
-    print(yaml.dump(nodesinfo, default_flow_style = False))
+    if healthy:
+        success(nodesinfo)
+    else:
+        fail(nodesinfo)
