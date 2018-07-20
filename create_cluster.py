@@ -23,32 +23,33 @@ class Struct:
 
 def print_message(s):
     if debug:
-        print('[+] %s' % s.rstrip())
+        print('[+] %s' % str(s).rstrip())
 
 def die(s):
     print(s, file = sys.stderr)
     sys.exit(2)
 
-def success(nodesinfo):
-    print(yaml.dump(nodesinfo, default_flow_style = False))
+def success(output, nodesinfo):
+    output.write(yaml.dump(nodesinfo, default_flow_style = False))
     sys.exit(0)
 
-def fail(nodesinfo):
-    print(yaml.dump(nodesinfo, default_flow_style = False))
+def fail(output, nodesinfo):
+    output.write(yaml.dump(nodesinfo, default_flow_style = False))
     sys.exit(2)
 
 def usage():
-    die('''     %s [-r iri repository] [-b iri branch] [-d --debug] -c cluster.yml
+    die('''     %s [-r iri repository] [-b iri branch] [-d --debug] -c cluster.yml -o output.yml
     
                 # -r / --repository         IRI repository to use
                 # -b / --branch             branch to test
                 # -d / --debug              print debug information
                 # -c / --cluster            cluster definition in YAML format
+                # -o / --output             output file for node information in YAML format
         ''' % __file__)
     sys.exit(2)
 
 def parse_opts(opts):
-    global repository, branch, debug, machine, cluster
+    global repository, branch, debug, machine, cluster, output
     if len(opts[0]) == 0:
         usage()
     for (key, value) in opts:
@@ -60,8 +61,12 @@ def parse_opts(opts):
             debug = True
         elif key == '-c' or key == '--cluster':
             cluster = value
+        elif key == '-o' or key == '--output':
+            output = value
         else:
             usage()
+    if not cluster or not output:
+        usage()
 
 def add_node_neighbor(node, neighbor):
     url = 'http://%s:%s' % (node.api, node.api_port)
@@ -90,15 +95,15 @@ def wait_until_iri_api_is_healthy(node):
                 'command': 'getNodeInfo'
               }
     try:
-        requests.post(url, headers = api_headers, data = json.dumps(payload))
+        requests.post(url, headers = api_headers, data = json.dumps(payload), timeout = 5)
     except:
-        time.sleep(5)
+        time.sleep(1)
 
 def checkout_iri(repository, branch):
     if os.path.isdir('docker/iri'):
-        os.system('cd docker/iri; git fetch --all; git checkout origin/%s' % branch)
+        os.system('(cd docker/iri; git fetch --all; git checkout origin/%s) 2>&1' % branch)
     else:
-        os.system('git clone --depth 1 --branch %s %s docker/iri' % (repository, branch))
+        os.system('(git clone --depth 1 --branch %s %s docker/iri) 2>&1' % (branch, repository))
     result = subprocess.Popen('cd docker/iri; git rev-parse HEAD', shell = True, stdout = subprocess.PIPE)
     return result.stdout.readlines()[0].rstrip()
 
@@ -141,12 +146,13 @@ branch = 'dev'
 docker_registry = 'karimo/iri-network-tests'
 debug = False
 cluster = None
+output = None
 nodesinfo = {}
 healthy = True
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
-    opts = getopt(sys.argv[1:], 'r:b:dc:', ['repository=', 'branch=', 'debug', 'cluster='])
+    opts = getopt(sys.argv[1:], 'r:b:dc:o:', ['repository=', 'branch=', 'debug', 'cluster=', 'output='])
     parse_opts(opts[0])
 
     with open(cluster, 'r') as stream:
@@ -154,6 +160,11 @@ if __name__ == '__main__':
             cluster = yaml.load(stream)
         except yaml.YAMLError as e:
             die(e)
+    try:
+        output = open(output, 'w')
+    except Exception as e:
+        die(e)
+
     cluster = Struct(**cluster)
     validate_cluster(cluster)
     print_message("Checking out IRI")
@@ -165,19 +176,19 @@ if __name__ == '__main__':
             docker_client.images.get('%s:%s' % (docker_registry, revision_hash))
         except docker.errors.ImageNotFound:
             print_message("Building docker image")
+            # Build process is really "loud"
             for line in docker_client.api.build(path = 'docker', tag = '%s:%s' % (docker_registry, revision_hash)):
                 try:
                     print_message(json.loads(line)['stream'])
                 except KeyError:
-                    import ipdb; ipdb.set_trace()
-                    print_message(json.loads(line)['aux']['Digest'])
+                    print_message(json.loads(line)['aux'])
 
         print_message("Pushing docker image to %s" % docker_registry)
         for line in docker_client.images.push(docker_registry, revision_hash, stream = True):
             try:
                 print_message(json.loads(line)['status'])
             except KeyError:
-                print_message(json.loads(line)['aux']['Digest'])
+                print_message(json.loads(line)['aux'])
 
     print_message("Initializing kubernetes client library against cluster")
     kubernetes_client = init_k8s_client()
@@ -218,6 +229,6 @@ if __name__ == '__main__':
             nodesinfo[node]['log'] = kubernetes_client.read_namespaced_pod_log(nodesinfo[node]['podname'], 'default', pretty = True)
 
     if healthy:
-        success(nodesinfo)
+        success(output, nodesinfo)
     else:
-        fail(nodesinfo)
+        fail(output, nodesinfo)
