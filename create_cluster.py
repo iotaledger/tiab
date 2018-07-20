@@ -151,7 +151,6 @@ nodesinfo = {}
 healthy = True
 
 if __name__ == '__main__':
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
     opts = getopt(sys.argv[1:], 'r:b:dc:o:', ['repository=', 'branch=', 'debug', 'cluster=', 'output='])
     parse_opts(opts[0])
 
@@ -165,6 +164,7 @@ if __name__ == '__main__':
     except Exception as e:
         die(e)
 
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
     cluster = Struct(**cluster)
     validate_cluster(cluster)
     print_message("Checking out IRI")
