@@ -169,6 +169,7 @@ if __name__ == '__main__':
     validate_cluster(cluster)
     print_message("Checking out IRI")
     revision_hash = checkout_iri(repository, branch)
+    nodesinfo['revision_hash'] = revision_hash
     print_message("Revision is %s" % revision_hash)
     if not is_image_in_docker_registry(docker_registry, revision_hash):
         docker_client = docker.from_env()
