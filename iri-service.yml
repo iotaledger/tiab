@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: iri-REVISION_PLACEHOLDER-NODE_NUMBER_PLACEHOLDER
+  generateName: iri-REVISION_PLACEHOLDER-NODE_NUMBER_PLACEHOLDER-
   labels:
     app: iri
     nodenum: "NODE_NUMBER_PLACEHOLDER"
