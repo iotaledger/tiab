@@ -132,10 +132,12 @@ def fill_template_property(template, placeholder, value):
 def wait_until_pod_ready(kubernetes_client, namespace, pod_name, timeout = 60):
     for _ in range(0, timeout):
         pod = kubernetes_client.read_namespaced_pod(pod_name, namespace)
+        if pod.status.phase == 'Failed':
+            break
         if pod.status.container_statuses[0].ready:
             return pod
         time.sleep(1)
-    raise RuntimeError('Pod is taking too long to get into "Running" state')
+    raise RuntimeError('Pod did not start correctly.')
 
 repository = 'https://github.com/iotaledger/iri.git'
 branch = 'dev'
