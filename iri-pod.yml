@@ -14,7 +14,7 @@ spec:
   - name: iri
     image: IRI_IMAGE_PLACEHOLDER
     imagePullPolicy: Always
-    livenessProbe:
+    readinessProbe:
       tcpSocket:
         port: 14265
     args:

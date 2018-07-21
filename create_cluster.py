@@ -17,10 +17,6 @@ api_headers = {
                 'X-IOTA-API-Version': 1
               }
 
-class Struct:
-    def __init__(self, **entries):
-        self.__dict__.update(entries)
-
 def print_message(s):
     if debug:
         print('[+] %s' % str(s).rstrip())
@@ -29,12 +25,12 @@ def die(s):
     print(s, file = sys.stderr)
     sys.exit(2)
 
-def success(output, nodesinfo):
-    output.write(yaml.dump(nodesinfo, default_flow_style = False))
+def success(output, cluster):
+    output.write(yaml.dump(cluster, default_flow_style = False))
     sys.exit(0)
 
-def fail(output, nodesinfo):
-    output.write(yaml.dump(nodesinfo, default_flow_style = False))
+def fail(output, cluster):
+    output.write(yaml.dump(cluster, default_flow_style = False))
     sys.exit(2)
 
 def usage():
@@ -72,7 +68,7 @@ def add_node_neighbor(node, neighbor):
     url = 'http://%s:%s' % (node.api, node.api_port)
     payload = {
                 'command': 'addNeighbors',
-                'uris': ['%s://%s:%s' % (cluster.protocol, neighbor.gossip, neighbor.gossip_port)]
+                'uris': ['%s://%s:%s' % (cluster['protocol'], neighbor.gossip, neighbor.gossip_port)]
               }
     requests.post(url, headers = api_headers, data = json.dumps(payload))
 
@@ -133,10 +129,10 @@ def deep_map(obj, func):
 def fill_template_property(template, placeholder, value):
     return deep_map(template, lambda s: s.replace(placeholder, value) if isinstance(s, str) else s)
 
-def wait_until_running_pod(kubernetes_client, namespace, pod_name, timeout = 60):
+def wait_until_pod_ready(kubernetes_client, namespace, pod_name, timeout = 60):
     for _ in range(0, timeout):
         pod = kubernetes_client.read_namespaced_pod(pod_name, namespace)
-        if pod.status.phase == 'Running':
+        if pod.status.container_statuses[0].ready:
             return pod
         time.sleep(1)
     raise RuntimeError('Pod is taking too long to get into "Running" state')
@@ -147,7 +143,6 @@ docker_registry = 'karimo/iri-network-tests'
 debug = False
 cluster = None
 output = None
-nodesinfo = {}
 healthy = True
 
 if __name__ == '__main__':
@@ -165,11 +160,10 @@ if __name__ == '__main__':
         die(e)
 
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
-    cluster = Struct(**cluster)
     validate_cluster(cluster)
     print_message("Checking out IRI")
     revision_hash = checkout_iri(repository, branch)
-    nodesinfo['revision_hash'] = revision_hash
+    cluster['revision_hash'] = revision_hash
     print_message("Revision is %s" % revision_hash)
     if not is_image_in_docker_registry(docker_registry, revision_hash):
         docker_client = docker.from_env()
@@ -202,8 +196,7 @@ if __name__ == '__main__':
     iri_pod_template = fill_template_property(iri_pod_template, 'IRI_IMAGE_PLACEHOLDER', '%s:%s' % (docker_registry, revision_hash))
     iri_service_template = fill_template_property(iri_service_template, 'REVISION_PLACEHOLDER', revision_hash)
 
-    for (node, properties) in cluster.nodes.iteritems():
-        nodesinfo[node] = {}
+    for (node, properties) in cluster['nodes'].iteritems():
         node_resource = fill_template_property(iri_pod_template, 'NODE_NUMBER_PLACEHOLDER', node.lower())
         service_resource = fill_template_property(iri_service_template, 'NODE_NUMBER_PLACEHOLDER', node.lower())
         node_resource = fill_template_property(node_resource, 'IRI_DB_URL_PLACEHOLDER', properties['db'])
@@ -213,23 +206,23 @@ if __name__ == '__main__':
         pod = kubernetes_client.create_namespaced_pod('default', node_resource, pretty = True)
         service = kubernetes_client.create_namespaced_service('default', service_resource, pretty = True)
         
-        nodesinfo[node]['podname'] = pod.metadata.name
-        nodesinfo[node]['servicename'] = service.metadata.name
-        nodesinfo[node]['ports'] = { p.name: p.node_port for p in service.spec.ports }
+        cluster['nodes'][node]['podname'] = pod.metadata.name
+        cluster['nodes'][node]['servicename'] = service.metadata.name
+        cluster['nodes'][node]['ports'] = { p.name: p.node_port for p in service.spec.ports }
 
-    for node in cluster.nodes.keys():
+    for node in cluster['nodes'].keys():
         try:
-            pod = wait_until_running_pod(kubernetes_client, 'default', nodesinfo[node]['podname'])
+            pod = wait_until_pod_ready(kubernetes_client, 'default', cluster['nodes'][node]['podname'])
         except RuntimeError:
             healthy = False
-            nodesinfo[node]['status'] = 'Error'
+            cluster['nodes'][node]['status'] = 'Error'
         else:
-            nodesinfo[node]['host'] = pod.status.host_ip
-            nodesinfo[node]['status'] = 'Running'
+            cluster['nodes'][node]['host'] = pod.status.host_ip
+            cluster['nodes'][node]['status'] = 'Running'
         finally:
-            nodesinfo[node]['log'] = kubernetes_client.read_namespaced_pod_log(nodesinfo[node]['podname'], 'default', pretty = True)
+            cluster['nodes'][node]['log'] = kubernetes_client.read_namespaced_pod_log(cluster['nodes'][node]['podname'], 'default', pretty = True)
 
     if healthy:
-        success(output, nodesinfo)
+        success(output, cluster)
     else:
-        fail(output, nodesinfo)
+        fail(output, cluster)
