@@ -1,6 +1,8 @@
 #!/bin/bash
 # See Dockerfile and DOCKER.md for further info
 
+set -x
+
 if [ "${DOCKER_IRI_MONITORING_API_PORT_ENABLE}" == "1" ]; then
   nohup socat -lm TCP-LISTEN:14266,fork TCP:127.0.0.1:${DOCKER_IRI_MONITORING_API_PORT_DESTINATION} &
 fi
@@ -17,7 +19,7 @@ if [ ! -z $IRI_DB_URL ]; then
   rm -rf /iri/data/testnet*
   rm -rf /iri/data/mainnet*
   ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'db/' | grep -E '^d'  | awk '{print $6}')
-  STRIP_COMPONENTS=$(echo $ARCHIVE_SUBPATH | awk -F'/' '{print NF-1}')
+  STRIP_COMPONENTS=$(echo $ARCHIVE_SUBPATH | awk -F'/' '{print NF-2}')
   tar xfv /tmp/db.tar --strip-components=$STRIP_COMPONENTS -C /iri/data $ARCHIVE_SUBPATH
 fi
 
