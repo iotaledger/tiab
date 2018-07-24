@@ -20,14 +20,14 @@ spec:
     - "GOSSIP_TCP_PORT_PLACEHOLDER"
     - "--udp-receiver-port"
     - "GOSSIP_UDP_PORT_PLACEHOLDER"
-    - "--testnet"
-    - "--testnet-coordinator"
-    - "BTCAAFIH9CJIVIMWFMIHKFNWRTLJRKSTMRCVRE9CIP9AEDTOULVFRHQZT9QAQBZXXAZGBNMVOOKTKAXTB"
-    - "--testnet-no-coo-validation"
     - "--milestone-start"
     - "0"
     - "--snapshot"
     - "/iri/data/snapshot.txt"
+    - "--testnet"
+    - "--testnet-coordinator"
+    - "BTCAAFIH9CJIVIMWFMIHKFNWRTLJRKSTMRCVRE9CIP9AEDTOULVFRHQZT9QAQBZXXAZGBNMVOOKTKAXTB"
+    - "--testnet-no-coo-validation"
     env:
     - name: IRI_DB_URL
       value: IRI_DB_URL_PLACEHOLDER
