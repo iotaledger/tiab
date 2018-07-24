@@ -77,7 +77,7 @@ function add_node_neighbor {
     -X POST \
     -H 'Content-Type: application/json' \
     -H 'X-IOTA-API-Version: 1' \
-    -d '{"command": "addNeighbors", "uris": ["'${SCHEME}${NEIGHBOR_IP}':$GOSSIP_TCP_PORT"]}'
+    -d '{"command": "addNeighbors", "uris": ["'${SCHEME}${NEIGHBOR_IP}':'$GOSSIP_TCP_PORT'"]}'
 }
 
 function add_node_mutual_neighbor {

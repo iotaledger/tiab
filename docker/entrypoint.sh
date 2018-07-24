@@ -8,13 +8,17 @@ fi
 MEM_GB=$(printf %.1s $(free -m | tail -n+2 | head -n-1 | awk -F' ' '{ print $2 }'))
 
 if [ ! -z $IRI_DB_URL ]; then
-  wget $IRI_DB_URL -O /tmp/testnetdb.tgz
-  if [ $(sha256sum /tmp/testnetdb.tgz | cut -d' ' -f1) != $IRI_DB_CHECKSUM ]; then
+  wget $IRI_DB_URL -O /tmp/db.tar
+  if [ $(sha256sum /tmp/db.tar | cut -d' ' -f1) != $IRI_DB_CHECKSUM ]; then
     echo "ERROR: checksum $IRI_DB_CHECKSUM doesn't match downloaded file!" >&2
     exit 2
   fi
+  rm -rf /iri/data/spamnet*
   rm -rf /iri/data/testnet*
-  tar xfv /tmp/testnetdb.tgz --strip-components=1 -C /iri/data testnet_files/testnetdb
+  rm -rf /iri/data/mainnet*
+  ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'db/' | grep -E '^d'  | awk '{print $6}')
+  STRIP_COMPONENTS=$(echo $ARCHIVE_SUBPATH | awk -F'/' '{print NF-1}')
+  tar xfv /tmp/db.tar --strip-components=$STRIP_COMPONENTS -C /iri/data $ARCHIVE_SUBPATH
 fi
 
 exec java \
