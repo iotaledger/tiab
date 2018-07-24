@@ -36,18 +36,19 @@ def fail(output, cluster):
     sys.exit(2)
 
 def usage():
-    die('''     %s [-r iri repository] [-b iri branch] [-d --debug] -c cluster.yml -o output.yml
+    die('''     %s [-r iri repository] [-b iri branch] [-u docker registry] [-d --debug] -c cluster.yml -o output.yml
     
                 # -r / --repository         IRI repository to use
                 # -b / --branch             branch to test
                 # -d / --debug              print debug information
                 # -c / --cluster            cluster definition in YAML format
+                # -u / --docker-registry    docker Hub relative path to upload IRI images
                 # -o / --output             output file for node information in YAML format
         ''' % __file__)
     sys.exit(2)
 
 def parse_opts(opts):
-    global repository, branch, debug, machine, cluster, output
+    global repository, branch, debug, machine, cluster, output, docker_registry
     if len(opts[0]) == 0:
         usage()
     for (key, value) in opts:
@@ -61,6 +62,8 @@ def parse_opts(opts):
             cluster = value
         elif key == '-o' or key == '--output':
             output = value
+        elif key == '-u' or key == '--docker-registry':
+            docker_registry = value
         else:
             usage()
     if not cluster or not output:
@@ -150,7 +153,7 @@ output = None
 healthy = True
 
 if __name__ == '__main__':
-    opts = getopt(sys.argv[1:], 'r:b:dc:o:', ['repository=', 'branch=', 'debug', 'cluster=', 'output='])
+    opts = getopt(sys.argv[1:], 'r:b:dc:o:u:', ['repository=', 'branch=', 'debug', 'cluster=', 'output=', 'docker-hub='])
     parse_opts(opts[0])
 
     with open(cluster, 'r') as stream:
