@@ -24,14 +24,14 @@ spec:
     - "15600"
     - "--udp-receiver-port"
     - "14600"
-    - "--testnet"
-    - "--testnet-coordinator"
-    - "BTCAAFIH9CJIVIMWFMIHKFNWRTLJRKSTMRCVRE9CIP9AEDTOULVFRHQZT9QAQBZXXAZGBNMVOOKTKAXTB"
-    - "--testnet-no-coo-validation"
     - "--milestone-start"
     - "0"
     - "--snapshot"
     - "/iri/data/snapshot.txt"
+    - "--testnet"
+    - "--testnet-coordinator"
+    - "BTCAAFIH9CJIVIMWFMIHKFNWRTLJRKSTMRCVRE9CIP9AEDTOULVFRHQZT9QAQBZXXAZGBNMVOOKTKAXTB"
+    - "--testnet-no-coo-validation"
     env:
     - name: IRI_DB_URL
       value: IRI_DB_URL_PLACEHOLDER
