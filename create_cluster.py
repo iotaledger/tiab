@@ -224,7 +224,7 @@ if __name__ == '__main__':
             healthy = False
             cluster['nodes'][node]['status'] = 'Error'
         else:
-            cluster['nodes'][node]['host'] = pod.status.host_ip
+            cluster['nodes'][node]['host'] = pod.spec.node_name
             cluster['nodes'][node]['status'] = 'Running'
         finally:
             cluster['nodes'][node]['log'] = kubernetes_client.read_namespaced_pod_log(cluster['nodes'][node]['podname'], 'default', pretty = True)
