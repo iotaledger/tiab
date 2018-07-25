@@ -153,7 +153,7 @@ output = None
 healthy = True
 
 if __name__ == '__main__':
-    opts = getopt(sys.argv[1:], 'r:b:dc:o:u:', ['repository=', 'branch=', 'debug', 'cluster=', 'output=', 'docker-hub='])
+    opts = getopt(sys.argv[1:], 'r:b:dc:o:u:', ['repository=', 'branch=', 'debug', 'cluster=', 'output=', 'docker-registry='])
     parse_opts(opts[0])
 
     with open(cluster, 'r') as stream:
