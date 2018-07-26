@@ -18,12 +18,6 @@ spec:
       tcpSocket:
         port: 14265
     args:
-    - "--port"
-    - "14265"
-    - "--tcp-receiver-port"
-    - "15600"
-    - "--udp-receiver-port"
-    - "14600"
     - "--milestone-start"
     - "0"
     - "--snapshot"
