@@ -21,6 +21,9 @@ if [ ! -z $IRI_DB_URL ]; then
   ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'db/' | grep -E '^d'  | awk '{print $6}')
   STRIP_COMPONENTS=$(echo $ARCHIVE_SUBPATH | awk -F'/' '{print NF-2}')
   tar xfv /tmp/db.tar --strip-components=$STRIP_COMPONENTS -C /iri/data $ARCHIVE_SUBPATH
+  SNAPSHOT_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'snapshot.txt' | awk '{print $6}')
+  SNAPSHOT_STRIP_COMPONENTS=$(echo $SNAPSHOT_ARCHIVE_SUBPATH | awk -F'/' '{print NF-1}')
+  tar xfv /tmp/db.tar --strip-components=$SNAPSHOT_STRIP_COMPONENTS -C /iri/data $SNAPSHOT_ARCHIVE_SUBPATH
 fi
 
 exec java \
