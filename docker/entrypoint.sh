@@ -11,9 +11,11 @@ MEM_GB=$(printf %.1s $(free -m | tail -n+2 | head -n-1 | awk -F' ' '{ print $2 }
 
 if [ ! -z $IRI_DB_URL ]; then
   wget $IRI_DB_URL -O /tmp/db.tar
-  if [ $(sha256sum /tmp/db.tar | cut -d' ' -f1) != $IRI_DB_CHECKSUM ]; then
-    echo "ERROR: checksum $IRI_DB_CHECKSUM doesn't match downloaded file!" >&2
-    exit 2
+  if [ ! -z $IRI_DB_CHECKSUM ]; then
+    if [ $(sha256sum /tmp/db.tar | cut -d' ' -f1) != $IRI_DB_CHECKSUM ]; then
+      echo "ERROR: checksum $IRI_DB_CHECKSUM doesn't match downloaded file!" >&2
+      exit 2
+    fi
   fi
   rm -rf /iri/data/spamnet*
   rm -rf /iri/data/testnet*

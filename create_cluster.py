@@ -207,7 +207,11 @@ if __name__ == '__main__':
         node_resource = fill_template_property(iri_pod_template, 'NODE_NUMBER_PLACEHOLDER', node.lower())
         service_resource = fill_template_property(iri_service_template, 'NODE_NUMBER_PLACEHOLDER', node.lower())
         node_resource = fill_template_property(node_resource, 'IRI_DB_URL_PLACEHOLDER', properties['db'])
-        node_resource = fill_template_property(node_resource, 'IRI_DB_CHECKSUM_PLACEHOLDER', properties['db_checksum'])
+        try:
+            db_checksum = properties['db_checksum']
+        except KeyError:
+            db_checksum = ''
+        node_resource = fill_template_property(node_resource, 'IRI_DB_CHECKSUM_PLACEHOLDER', db_checksum)
 
         print_message("Deploying %s" % node)
         pod = kubernetes_client.create_namespaced_pod('default', node_resource, pretty = True)
