@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-{{ REVISION_PLACEHOLDER }}
+  labels:
+    app: prometheus
+    revision: {{ REVISION_PLACEHOLDER }}
+data:
+  prometheus.yml:

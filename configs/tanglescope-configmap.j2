@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tanglescope-{{ NODE_UUID_PLACEHOLDER }}
+  labels:
+    app: tanglescope
+    revision: {{ REVISION_PLACEHOLDER }}
+    uuid: {{ NODE_UUID_PLACEHOLDER }}
+data:
+  tanglescope.yml:

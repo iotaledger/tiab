@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tanglescope-{{ NODE_UUID_PLACEHOLDER }}
+  labels:
+    app: tanglescope
+    revision: {{ REVISION_PLACEHOLDER }}
+    uuid: {{ NODE_UUID_PLACEHOLDER }}
+
+spec:
+  containers:
+
+  - name: tanglescope
+    image: iotacafe/entangled:tanglescope-41fa5ab-1
+    readinessProbe:
+      tcpSocket:
+        port: 4444
+      tcpSocket:
+        port: 4445
+      tcpSocket:
+        port: 4446
+      tcpSocket:
+        port: 4447
+    volumeMounts:
+      - name: tanglescope
+        subPath: tanglescope.yml
+        mountPath: /config.yml
+    ports:
+    # Exporter
+    - containerPort: 4444
+    - containerPort: 4445
+    - containerPort: 4446
+    - containerPort: 4447
+
+  volumes:
+    - name: tanglescope
+      configMap:
+        name: tanglescope-{{ NODE_UUID_PLACEHOLDER }}

@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tanglescope-clusterip-{{ NODE_UUID_PLACEHOLDER }}
+  labels:
+    app: tanglescope
+    revision: {{ REVISION_PLACEHOLDER }}
+    uuid: {{ NODE_UUID_PLACEHOLDER }}
+
+spec:
+  ports:
+    - name: statscollector
+      port: 4444
+      targetPort: 4444
+    - name: blowballcollector
+      port: 4445
+      targetPort: 4445
+    - name: tipselectioncollector
+      port: 4446
+      targetPort: 4446
+    - name: tanglewidthcollector
+      port: 4447
+      targetPort: 4447
+  selector:
+    app: iri
+    uuid: {{ NODE_UUID_PLACEHOLDER }}
+  type: ClusterIP

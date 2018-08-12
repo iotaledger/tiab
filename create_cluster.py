@@ -12,7 +12,9 @@ import subprocess
 import requests
 import docker
 import kubernetes
+from uuid import uuid4
 from getopt import getopt
+from jinja2 import Template
 
 api_headers = {
                 'Content-Type': 'application/json',
@@ -119,30 +121,85 @@ def init_k8s_client():
     kubernetes.config.load_kube_config()
     return kubernetes.client.CoreV1Api()
 
-def deep_map(obj, func):
-    _obj = copy.deepcopy(obj)
-    if type(_obj) == dict:
-        for key in _obj.keys():
-            _obj[key] = deep_map(_obj[key], func)
-    elif type(_obj) == list:
-        for i, _ in enumerate(_obj):
-            _obj[i] = deep_map(_obj[i], func)
-    else:
-        _obj = func(_obj)
-    return _obj
-
-def fill_template_property(template, placeholder, value):
-    return deep_map(template, lambda s: s.replace(placeholder, value) if isinstance(s, str) else s)
-
 def wait_until_pod_ready(kubernetes_client, namespace, pod_name, timeout = 60):
     for _ in range(0, timeout):
         pod = kubernetes_client.read_namespaced_pod(pod_name, namespace)
         if pod.status.phase == 'Failed':
             break
-        if pod.status.container_statuses[0].ready:
-            return pod
-        time.sleep(1)
+        try:
+            if reduce(lambda ready, container: ready and container.ready, pod.status.container_statuses, True):
+                return pod
+        except TypeError:
+            pass
+        finally:
+            time.sleep(1)
     raise RuntimeError('Pod did not start correctly.')
+
+def deploy_monitoring(kubernetes_client, cluster):
+    with open('configs/tanglescope.j2', 'r') as stream:
+        tanglescope_config_template = Template(stream.read())
+    with open('configs/tanglescope-configmap.j2', 'r') as stream:
+        tanglescope_configmap_template = Template(stream.read())
+    with open('configs/tanglescope-pod.j2', 'r') as stream:
+        tanglescope_pod_template = Template(stream.read())
+    with open('configs/tanglescope-clusterip.j2', 'r') as stream:
+        tanglescope_clusterip_template = Template(stream.read())
+    with open('configs/prometheus.j2', 'r') as stream:
+        prometheus_config_template = Template(stream.read())
+    with open('configs/prometheus-configmap.j2', 'r') as stream:
+        prometheus_configmap_template = Template(stream.read())
+    with open('configs/prometheus-grafana-pod.j2', 'r') as stream:
+        prometheus_grafana_pod_template = Template(stream.read())
+    with open('configs/prometheus-grafana-service.j2', 'r') as stream:
+        prometheus_grafana_service_template = Template(stream.read())
+    for node in cluster['nodes'].keys():
+        tanglescope_config = tanglescope_config_template.render(iri_target = cluster['nodes'][node]['clusterip'])
+        tanglescope_configmap_resource = yaml.load(tanglescope_configmap_template.render(
+            REVISION_PLACEHOLDER = cluster['revision_hash'],
+            NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
+        ))
+        tanglescope_pod_resource = yaml.load(tanglescope_pod_template.render(
+            REVISION_PLACEHOLDER = cluster['revision_hash'],
+            NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
+        ))
+        tanglescope_clusterip_resource = yaml.load(tanglescope_clusterip_template.render(
+            REVISION_PLACEHOLDER = cluster['revision_hash'],
+            NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
+        ))
+        tanglescope_configmap_resource['data']['tanglescope.yml'] = tanglescope_config
+        kubernetes_client.create_namespaced_config_map('default', tanglescope_configmap_resource, pretty = True)
+        pod = kubernetes_client.create_namespaced_pod('default', tanglescope_pod_resource, pretty = True)
+        clusterip = kubernetes_client.create_namespaced_service('default', tanglescope_clusterip_resource, pretty = True)
+
+        cluster['nodes'][node]['tanglescope_podname'] = pod.metadata.name
+        cluster['nodes'][node]['tanglescope_clusteripname'] = clusterip.metadata.name
+        cluster['nodes'][node]['tanglescope_clusterip'] = clusterip.spec.cluster_ip
+        cluster['nodes'][node]['tanglescope_clusterip_ports'] = { p.name: p.port for p in clusterip.spec.ports }
+
+    prometheus_config = prometheus_config_template.render(
+        iri_targets = [ properties['clusterip'] for (_, properties) in cluster['nodes'].iteritems() ],
+        tanglescope_targets = [ properties['tanglescope_clusterip'] for (_, properties) in cluster['nodes'].iteritems() ]
+    )
+    prometheus_configmap_resource = yaml.load(prometheus_configmap_template.render(
+        REVISION_PLACEHOLDER = cluster['revision_hash']
+    ))
+    prometheus_grafana_pod_resource = yaml.load(prometheus_grafana_pod_template.render(
+        REVISION_PLACEHOLDER = cluster['revision_hash']
+    ))
+    prometheus_grafana_service_resource = yaml.load(prometheus_grafana_service_template.render(
+        REVISION_PLACEHOLDER = cluster['revision_hash']
+    ))
+    prometheus_configmap_resource['data']['prometheus.yml'] = prometheus_config
+    kubernetes_client.create_namespaced_config_map('default', prometheus_configmap_resource, pretty = True)
+    pod = kubernetes_client.create_namespaced_pod('default', prometheus_grafana_pod_resource, pretty = True)
+    service = kubernetes_client.create_namespaced_service('default', prometheus_grafana_service_resource, pretty = True)
+
+    cluster['grafana_podname'] = pod.metadata.name
+    cluster['grafana_servicename'] = service.metadata.name
+    cluster['grafana_port'] = service.spec.ports[0].node_port
+
+    pod = wait_until_pod_ready(kubernetes_client, 'default', cluster['grafana_podname'])
+    cluster['grafana_host'] = pod.spec.node_name
 
 repository = 'https://github.com/iotaledger/iri.git'
 branch = 'dev'
@@ -153,8 +210,11 @@ output = None
 healthy = True
 
 if __name__ == '__main__':
-    opts = getopt(sys.argv[1:], 'r:b:dc:o:u:', ['repository=', 'branch=', 'debug', 'cluster=', 'output=', 'docker-registry='])
-    parse_opts(opts[0])
+    try:
+        opts = getopt(sys.argv[1:], 'r:b:dc:o:u:', ['repository=', 'branch=', 'debug', 'cluster=', 'output=', 'docker-registry='])
+        parse_opts(opts[0])
+    except:
+        usage()
 
     with open(cluster, 'r') as stream:
         try:
@@ -194,32 +254,58 @@ if __name__ == '__main__':
 
     print_message("Initializing kubernetes client library against cluster")
     kubernetes_client = init_k8s_client()
-    with open('iri-pod.yml', 'r') as stream:
-        iri_pod_template = yaml.load(stream)
-    with open('iri-service.yml', 'r') as stream:
-        iri_service_template = yaml.load(stream)
-
-    iri_pod_template = fill_template_property(iri_pod_template, 'REVISION_PLACEHOLDER', revision_hash)
-    iri_pod_template = fill_template_property(iri_pod_template, 'IRI_IMAGE_PLACEHOLDER', '%s:%s' % (docker_registry, revision_hash))
-    iri_service_template = fill_template_property(iri_service_template, 'REVISION_PLACEHOLDER', revision_hash)
+    with open('configs/iri-pod.j2', 'r') as stream:
+        iri_pod_template = Template(stream.read())
+    with open('configs/iri-service.j2', 'r') as stream:
+        iri_service_template = Template(stream.read())
+    with open('configs/iri-clusterip.j2', 'r') as stream:
+        iri_clusterip_template = Template(stream.read())
 
     for (node, properties) in cluster['nodes'].iteritems():
-        node_resource = fill_template_property(iri_pod_template, 'NODE_NUMBER_PLACEHOLDER', node.lower())
-        service_resource = fill_template_property(iri_service_template, 'NODE_NUMBER_PLACEHOLDER', node.lower())
-        node_resource = fill_template_property(node_resource, 'IRI_DB_URL_PLACEHOLDER', properties['db'])
+        node_uuid = str(uuid4())
+        service_resource = yaml.load(iri_service_template.render(
+            REVISION_PLACEHOLDER = revision_hash,
+            NODE_NUMBER_PLACEHOLDER = node.lower(),
+            NODE_UUID_PLACEHOLDER = node_uuid
+        ))
+        clusterip_resource = yaml.load(iri_clusterip_template.render(
+            REVISION_PLACEHOLDER = revision_hash,
+            NODE_NUMBER_PLACEHOLDER = node.lower(),
+            NODE_UUID_PLACEHOLDER = node_uuid
+        ))
+
         try:
             db_checksum = properties['db_checksum']
         except KeyError:
             db_checksum = ''
-        node_resource = fill_template_property(node_resource, 'IRI_DB_CHECKSUM_PLACEHOLDER', db_checksum)
+
+        pod_resource = yaml.load(iri_pod_template.render(
+            REVISION_PLACEHOLDER = revision_hash,
+            IRI_IMAGE_PLACEHOLDER = '%s:%s' % (docker_registry, revision_hash),
+            NODE_NUMBER_PLACEHOLDER = node.lower(),
+            IRI_DB_URL_PLACEHOLDER = properties['db'],
+            IRI_DB_CHECKSUM_PLACEHOLDER = db_checksum,
+            NODE_UUID_PLACEHOLDER = node_uuid
+        ))
 
         print_message("Deploying %s" % node)
-        pod = kubernetes_client.create_namespaced_pod('default', node_resource, pretty = True)
+        pod = kubernetes_client.create_namespaced_pod('default', pod_resource, pretty = True)
         service = kubernetes_client.create_namespaced_service('default', service_resource, pretty = True)
-        
+        clusterip = kubernetes_client.create_namespaced_service('default', clusterip_resource, pretty = True)
+
+        cluster['nodes'][node]['uuid'] = node_uuid
         cluster['nodes'][node]['podname'] = pod.metadata.name
         cluster['nodes'][node]['servicename'] = service.metadata.name
+        cluster['nodes'][node]['clusteripname'] = clusterip.metadata.name
         cluster['nodes'][node]['ports'] = { p.name: p.node_port for p in service.spec.ports }
+        cluster['nodes'][node]['clusterip'] = clusterip.spec.cluster_ip
+        cluster['nodes'][node]['clusterip_ports'] = { p.name: p.port for p in clusterip.spec.ports }
+
+    try:
+        if cluster['monitoring']:
+            deploy_monitoring(kubernetes_client, cluster)
+    except KeyError:
+        pass
 
     for node in cluster['nodes'].keys():
         try:
