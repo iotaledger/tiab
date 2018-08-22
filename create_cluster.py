@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import re
 import json
 import yaml
 import os
@@ -17,8 +18,8 @@ from getopt import getopt
 from jinja2 import Template
 
 api_headers = {
-                'Content-Type': 'application/json',
-                'X-IOTA-API-Version': 1
+                'X-IOTA-API-Version': '1',
+                'Content-Type': 'application/json'
               }
 
 def print_message(s):
@@ -71,11 +72,11 @@ def parse_opts(opts):
     if not cluster or not output:
         usage()
 
-def add_node_neighbor(node, neighbor):
-    url = 'http://%s:%s' % (node.api, node.api_port)
+def add_node_neighbor(node, protocol, host, port):
+    url = 'http://%s:%s' % (node['host'], node['ports']['api'])
     payload = {
                 'command': 'addNeighbors',
-                'uris': ['%s://%s:%s' % (cluster['protocol'], neighbor.gossip, neighbor.gossip_port)]
+                'uris': ['%s://%s:%s' % (protocol, host, port)]
               }
     requests.post(url, headers = api_headers, data = json.dumps(payload))
 
@@ -316,6 +317,14 @@ if __name__ == '__main__':
         else:
             cluster['nodes'][node]['host'] = pod.spec.node_name
             cluster['nodes'][node]['status'] = 'Running'
+            for neighbor in cluster['nodes'][node]['neighbors']:
+                m = re.match('^([a-z]+?)://([^:]+?):(\d+)$', neighbor)
+                protocol = m.group(1)
+                host = m.group(2)
+                port = m.group(3)
+                if host in cluster['nodes'].keys():
+                    host = cluster['nodes'][host]['clusterip']
+                add_node_neighbor(cluster['nodes'][node], protocol, host, port)
         finally:
             cluster['nodes'][node]['log'] = kubernetes_client.read_namespaced_pod_log(cluster['nodes'][node]['podname'], 'default', pretty = True)
 
