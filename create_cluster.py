@@ -259,7 +259,7 @@ if __name__ == '__main__':
             for line in docker_client.api.build(path = 'docker', tag = '%s:%s' % (docker_registry, revision_hash)):
                 try:
                     print_message(json.loads(line)['stream'])
-                except KeyError:
+                except ValueError, KeyError:
                     print_message(json.loads(line))
 
         print_message("Pushing docker image to %s" % docker_registry)
