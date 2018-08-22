@@ -202,6 +202,22 @@ def deploy_monitoring(kubernetes_client, cluster):
     pod = wait_until_pod_ready(kubernetes_client, 'default', cluster['grafana_podname'])
     cluster['grafana_host'] = pod.spec.node_name
 
+    url = 'http://%s:%s/api/datasources' % (cluster['grafana_host'], cluster['grafana_port'])
+    headers = {
+                'X-Grafana-Org-Id': '1',
+                'Content-Type': 'application/json;charset=UTF-8'
+              }
+    payload = {
+                'name': 'Prometheus',
+                'isDefault': True,
+                'type': 'prometheus',
+                'url': 'http://localhost:9090',
+                'access': 'proxy',
+                'jsonData': { 'keepCookies': [], 'httpMethod': 'GET' },
+                'secureJsonFields': {}
+              }
+    requests.post(url, auth = ('admin', 'admin'), headers = headers, data = json.dumps(payload))
+
 repository = 'https://github.com/iotaledger/iri.git'
 branch = 'dev'
 docker_registry = 'karimo/iri-network-tests'
