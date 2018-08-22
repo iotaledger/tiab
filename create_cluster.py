@@ -260,14 +260,14 @@ if __name__ == '__main__':
                 try:
                     print_message(json.loads(line)['stream'])
                 except ValueError, KeyError:
-                    print_message(json.loads(line))
+                    print_message(line)
 
         print_message("Pushing docker image to %s" % docker_registry)
         for line in docker_client.images.push(docker_registry, revision_hash, stream = True):
             try:
                 print_message(json.loads(line)['status'])
-            except KeyError:
-                print_message(json.loads(line))
+            except ValueError, KeyError:
+                print_message(line)
 
     print_message("Initializing kubernetes client library against cluster")
     kubernetes_client = init_k8s_client()
