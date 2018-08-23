@@ -35,6 +35,6 @@ exec java \
   -Dcom.sun.management.jmxremote.* \
   -javaagent:/iri/jmx_prometheus_javaagent-0.3.1.jar=5555:/iri/conf/extras/jmx_prom_config.yaml \
   -jar $DOCKER_IRI_JAR_PATH \
-  --remote \
+  --api-host 0.0.0.0 \
   -c /iri.ini \
   "$@"
