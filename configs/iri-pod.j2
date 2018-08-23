@@ -32,6 +32,8 @@ spec:
       value: {{ IRI_DB_URL_PLACEHOLDER }}
     - name: IRI_DB_CHECKSUM
       value: {{ IRI_DB_CHECKSUM_PLACEHOLDER }}
+    - name: JAVA_OPTIONS
+      value: "-agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=n"
     ports:
     # IRI API
     - containerPort: 14265
@@ -39,6 +41,8 @@ spec:
     - containerPort: 15600
     - containerPort: 14600
       protocol: UDP
+    # Java Debugger
+    - containerPort: 8000
     # JMX Prometheus
     - containerPort: 5555
     # ZMQ Feed
