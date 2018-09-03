@@ -11,7 +11,6 @@ import copy
 import time
 import subprocess
 import requests
-import docker
 import kubernetes
 from uuid import uuid4
 from getopt import getopt
@@ -39,37 +38,31 @@ def fail(output, cluster):
     sys.exit(2)
 
 def usage():
-    die('''     %s [-r iri repository] [-b iri branch] [-u docker registry] [-d --debug] -c cluster.yml -o output.yml
+    die('''     %s -i repo/image:latest -c cluster.yml -o output.yml [-d --debug] 
     
-                # -r / --repository         IRI repository to use
-                # -b / --branch             branch to test
-                # -d / --debug              print debug information
+                # -i / --image              Docker IRI image to use, relative to Hub
                 # -c / --cluster            cluster definition in YAML format
-                # -u / --docker-registry    docker Hub relative path to upload IRI images
                 # -o / --output             output file for node information in YAML format
+                # -d / --debug              print debug information
         ''' % __file__)
     sys.exit(2)
 
 def parse_opts(opts):
-    global repository, branch, debug, machine, cluster, output, docker_registry
+    global docker_image, debug, machine, cluster, output
     if len(opts[0]) == 0:
         usage()
     for (key, value) in opts:
-        if key == '-r' or key == '--repository':
-            repository = value
-        elif key == '-b' or key == '--branch':
-            branch = value
+        if key == '-i' or key == '--image':
+            docker_image = value
         elif key == '-d' or key == '--debug':
             debug = True
         elif key == '-c' or key == '--cluster':
             cluster = value
         elif key == '-o' or key == '--output':
             output = value
-        elif key == '-u' or key == '--docker-registry':
-            docker_registry = value
         else:
             usage()
-    if not cluster or not output:
+    if not docker_image or not cluster or not output:
         usage()
 
 def add_node_neighbor(node, protocol, host, port):
@@ -102,18 +95,6 @@ def wait_until_iri_api_is_healthy(node):
         requests.post(url, headers = api_headers, data = json.dumps(payload), timeout = 5)
     except:
         time.sleep(1)
-
-def checkout_iri(repository, branch):
-    if os.path.isdir('docker/iri'):
-        os.system('(cd docker/iri; git fetch --all; git checkout origin/%s) 2>&1' % branch)
-    else:
-        os.system('(git clone --depth 1 --branch %s %s docker/iri) 2>&1' % (branch, repository))
-    result = subprocess.Popen('cd docker/iri; git rev-parse HEAD', shell = True, stdout = subprocess.PIPE)
-    return result.stdout.readlines()[0].rstrip()
-
-def is_image_in_docker_registry(registry, revision_hash):
-    url = 'https://registry.hub.docker.com/v2/repositories/%s/tags/%s/' % (registry, revision_hash)
-    return requests.get(url).status_code == 200
 
 def validate_cluster(cluster):
     pass
@@ -218,9 +199,7 @@ def deploy_monitoring(kubernetes_client, cluster):
               }
     requests.post(url, auth = ('admin', 'admin'), headers = headers, data = json.dumps(payload))
 
-repository = 'https://github.com/iotaledger/iri.git'
-branch = 'dev'
-docker_registry = 'karimo/iri-network-tests'
+docker_image = None
 debug = False
 cluster = None
 output = None
@@ -228,7 +207,7 @@ healthy = True
 
 if __name__ == '__main__':
     try:
-        opts = getopt(sys.argv[1:], 'r:b:dc:o:u:', ['repository=', 'branch=', 'debug', 'cluster=', 'output=', 'docker-registry='])
+        opts = getopt(sys.argv[1:], 'i:dc:o:u:', ['image=', 'debug', 'cluster=', 'output='])
         parse_opts(opts[0])
     except:
         usage()
@@ -245,30 +224,6 @@ if __name__ == '__main__':
 
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     validate_cluster(cluster)
-    print_message("Checking out IRI")
-    revision_hash = checkout_iri(repository, branch)
-    cluster['revision_hash'] = revision_hash
-    print_message("Revision is %s" % revision_hash)
-    if not is_image_in_docker_registry(docker_registry, revision_hash):
-        docker_client = docker.from_env()
-        try:
-            docker_client.images.get('%s:%s' % (docker_registry, revision_hash))
-        except docker.errors.ImageNotFound:
-            print_message("Building docker image")
-            # Build process is really "loud"
-            for line in docker_client.api.build(path = 'docker', tag = '%s:%s' % (docker_registry, revision_hash)):
-                try:
-                    print_message(json.loads(line)['stream'])
-                except:
-                    print_message(line)
-
-        print_message("Pushing docker image to %s" % docker_registry)
-        for line in docker_client.images.push(docker_registry, revision_hash, stream = True):
-            try:
-                print_message(json.loads(line)['status'])
-            except:
-                print_message(line)
-
     print_message("Initializing kubernetes client library against cluster")
     kubernetes_client = init_k8s_client()
     with open('configs/iri-pod.j2', 'r') as stream:
@@ -298,7 +253,7 @@ if __name__ == '__main__':
 
         pod_resource = yaml.load(iri_pod_template.render(
             REVISION_PLACEHOLDER = revision_hash,
-            IRI_IMAGE_PLACEHOLDER = '%s:%s' % (docker_registry, revision_hash),
+            IRI_IMAGE_PLACEHOLDER = docker_image,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             IRI_DB_URL_PLACEHOLDER = properties['db'],
             IRI_DB_CHECKSUM_PLACEHOLDER = db_checksum,

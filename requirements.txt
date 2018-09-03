@@ -2,8 +2,6 @@ backports.ssl-match-hostname==3.5.0.1
 cachetools==2.1.0
 certifi==2018.4.16
 chardet==3.0.4
-docker==3.4.1
-docker-pycreds==0.3.0
 google-auth==1.5.0
 idna==2.7
 ipaddress==1.0.22
