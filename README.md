@@ -1,15 +1,72 @@
-# iri-network-tests
-Automation to stress-test IRI algorithms and network.
+# Tangle in a Box
+This tool allows automatic deployment of IRI clusters using Kubernetes according to a YAML-formatted configuration file.
 
-## System Dependencies
-
-* curl
-* git
-* jq
-* j2cli
-* docker
-* kubectl
+The tool will output all the relevant node information into a similarly-formatted YAML file.
 
 ## Before you start
 
-You will need to configure your local kubectl against the cluster you want to deploy to.
+You will need a working Kubernetes cluster you want to deploy to and your local kubectl correctly configured to use it.
+
+## Installation
+
+It is advised to install TIAB's dependencies in a Python virtual environment as follows:
+
+```bash
+$ virtualenv venv
+$ source venv/bin/activate
+$ pip install -r requirements.txt
+```
+
+## Command line options
+
+```
+-i / --image              Docker IRI image to use, relative to Hub
+-t / --tag                ID to tag the deployment with
+-c / --cluster            cluster definition in YAML format
+-o / --output             output file for node information in YAML format
+-k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
+-d / --debug              print debug information
+```
+
+## Configuration Example
+
+```yaml
+defaults: &db_1
+  db: https://s3.eu-central-1.amazonaws.com/iotaledger-dbfiles/dev/testnet_files.tgz
+  db_checksum: 6eaa06d5442416b7b8139e337a1598d2bae6a7f55c2d9d01f8c5dac69c004f75
+
+nodes:
+  nodeA: #name
+    <<: *db_1
+    neighbours:
+      - nodeB
+  
+  nodeB:
+    <<: *db_1
+    neighbours:
+      - nodeA
+      - 8.8.8.8
+
+```
+
+## Example Usage
+
+```bash
+$ ./create_cluster.py --image iotacafe/iri-dev:8d32b7c-29 --tag 1.5.3-deployment --cluster config.yml --output output.yml 
+```
+
+The resulting `output.yml` file will contain all the data you need to connect to your nodes.
+
+## Teardown a cluster
+
+You can easily destroy all the resources associated to the cluster you just created by using the `teardown_cluster.sh` utility, and passing to it the tag you used to deploy the cluster.
+
+```bash
+$ ./teardown_cluster.sh --tag 1.5.3-deployment
+```
+
+## Monitoring capabilities (Alpha)
+
+If the `config.yml` file includes a `monitoring: True` entry, a twin [tanglescope](https://github.com/iotaledger/entangled) pod will be deployed along every IRI node. Tanglescope wil be responsible to obtain any sort of metrics on the node and serve them to a central Grafana Pod, using Prometheus as a database backend.
+
+
