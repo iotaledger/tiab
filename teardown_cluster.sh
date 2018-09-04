@@ -1,16 +1,16 @@
 #!/bin/bash
 
-OPTS=$(getopt -o r: --long revision: -- "$@")
+OPTS=$(getopt -o t: --long tag: -- "$@")
 eval set -- $OPTS
 
-if [ $1 = '-r' -o $1 = '--revision' ]; then
-  REVISION=$2
+if [ $1 = '-t' -o $1 = '--tag' ]; then
+  TAG=$2
 fi
 
-if [ -z "$REVISION" ]; then
+if [ -z "$TAG" ]; then
   echo -n "Revision to nuke: "
-  read REVISION
+  read TAG
 fi
 
-kubectl delete all -l revision=$REVISION
-kubectl delete cm -l revision=$REVISION
+kubectl delete all -l tag=$TAG
+kubectl delete cm -l tag=$TAG
