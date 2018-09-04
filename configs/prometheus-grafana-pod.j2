@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: prometheus-grafana-{{ REVISION_PLACEHOLDER }}
+  name: prometheus-grafana-{{ TAG_PLACEHOLDER }}
   labels:
     app: prometheus-grafana
-    revision: {{ REVISION_PLACEHOLDER }}
+    revision: {{ TAG_PLACEHOLDER }}
 
 spec:
   containers:
@@ -34,4 +34,4 @@ spec:
   volumes:
   - name: prometheus
     configMap:
-      name: prometheus-{{ REVISION_PLACEHOLDER }}
+      name: prometheus-{{ TAG_PLACEHOLDER }}

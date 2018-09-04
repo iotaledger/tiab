@@ -38,9 +38,10 @@ def fail(output, cluster):
     sys.exit(2)
 
 def usage():
-    die('''     %s -i repo/image:latest -c cluster.yml -o output.yml [-k kube.config] [-d --debug]
+    die('''     %s -i repo/image:latest -t tag -c cluster.yml -o output.yml [-k kube.config] [-d --debug]
     
                 # -i / --image              Docker IRI image to use, relative to Hub
+                # -t / --tag                ID to tag the deployment with
                 # -c / --cluster            cluster definition in YAML format
                 # -o / --output             output file for node information in YAML format
                 # -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
@@ -49,7 +50,7 @@ def usage():
     sys.exit(2)
 
 def parse_opts(opts):
-    global docker_image, kubeconfig, cluster, output, debug
+    global docker_image, tag, kubeconfig, cluster, output, debug
     if len(opts[0]) == 0:
         usage()
     for (key, value) in opts:
@@ -61,11 +62,13 @@ def parse_opts(opts):
             output = value
         elif key == '-k' or key == '--kubeconfig':
             kubeconfig = value
+        elif key == '-t' or key == '--tag':
+            tag = value
         elif key == '-d' or key == '--debug':
             debug = True
         else:
             usage()
-    if not docker_image or not cluster or not output:
+    if not docker_image or not tag or not cluster or not output:
         usage()
 
 def add_node_neighbor(node, protocol, host, port):
@@ -140,15 +143,15 @@ def deploy_monitoring(kubernetes_client, cluster):
     for node in cluster['nodes'].keys():
         tanglescope_config = tanglescope_config_template.render(iri_target = cluster['nodes'][node]['clusterip'])
         tanglescope_configmap_resource = yaml.load(tanglescope_configmap_template.render(
-            REVISION_PLACEHOLDER = cluster['revision_hash'],
+            TAG_PLACEHOLDER = tag,
             NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
         ))
         tanglescope_pod_resource = yaml.load(tanglescope_pod_template.render(
-            REVISION_PLACEHOLDER = cluster['revision_hash'],
+            TAG_PLACEHOLDER = tag,
             NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
         ))
         tanglescope_clusterip_resource = yaml.load(tanglescope_clusterip_template.render(
-            REVISION_PLACEHOLDER = cluster['revision_hash'],
+            TAG_PLACEHOLDER = tag,
             NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
         ))
         tanglescope_configmap_resource['data']['tanglescope.yml'] = tanglescope_config
@@ -166,13 +169,13 @@ def deploy_monitoring(kubernetes_client, cluster):
         tanglescope_targets = [ properties['tanglescope_clusterip'] for (_, properties) in cluster['nodes'].iteritems() ]
     )
     prometheus_configmap_resource = yaml.load(prometheus_configmap_template.render(
-        REVISION_PLACEHOLDER = cluster['revision_hash']
+        TAG_PLACEHOLDER = tag
     ))
     prometheus_grafana_pod_resource = yaml.load(prometheus_grafana_pod_template.render(
-        REVISION_PLACEHOLDER = cluster['revision_hash']
+        TAG_PLACEHOLDER = tag
     ))
     prometheus_grafana_service_resource = yaml.load(prometheus_grafana_service_template.render(
-        REVISION_PLACEHOLDER = cluster['revision_hash']
+        TAG_PLACEHOLDER = tag
     ))
     prometheus_configmap_resource['data']['prometheus.yml'] = prometheus_config
     kubernetes_client.create_namespaced_config_map('default', prometheus_configmap_resource, pretty = True)
@@ -203,6 +206,7 @@ def deploy_monitoring(kubernetes_client, cluster):
     requests.post(url, auth = ('admin', 'admin'), headers = headers, data = json.dumps(payload))
 
 docker_image = None
+tag = None
 kubeconfig = None
 debug = False
 cluster = None
@@ -211,7 +215,7 @@ healthy = True
 
 if __name__ == '__main__':
     try:
-        opts = getopt(sys.argv[1:], 'i:k:c:o:d', ['image=', 'kubeconfig=', 'cluster=', 'output=', 'debug'])
+        opts = getopt(sys.argv[1:], 'i:t:k:c:o:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'output=', 'debug'])
         parse_opts(opts[0])
     except:
         usage()
@@ -240,12 +244,12 @@ if __name__ == '__main__':
     for (node, properties) in cluster['nodes'].iteritems():
         node_uuid = str(uuid4())
         service_resource = yaml.load(iri_service_template.render(
-            REVISION_PLACEHOLDER = revision_hash,
+            TAG_PLACEHOLDER = tag,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
         clusterip_resource = yaml.load(iri_clusterip_template.render(
-            REVISION_PLACEHOLDER = revision_hash,
+            TAG_PLACEHOLDER = tag,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
@@ -256,7 +260,7 @@ if __name__ == '__main__':
             db_checksum = ''
 
         pod_resource = yaml.load(iri_pod_template.render(
-            REVISION_PLACEHOLDER = revision_hash,
+            TAG_PLACEHOLDER = tag,
             IRI_IMAGE_PLACEHOLDER = docker_image,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             IRI_DB_URL_PLACEHOLDER = properties['db'],
