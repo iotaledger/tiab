@@ -38,28 +38,31 @@ def fail(output, cluster):
     sys.exit(2)
 
 def usage():
-    die('''     %s -i repo/image:latest -c cluster.yml -o output.yml [-d --debug] 
+    die('''     %s -i repo/image:latest -c cluster.yml -o output.yml [-k kube.config] [-d --debug]
     
                 # -i / --image              Docker IRI image to use, relative to Hub
                 # -c / --cluster            cluster definition in YAML format
                 # -o / --output             output file for node information in YAML format
+                # -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
                 # -d / --debug              print debug information
         ''' % __file__)
     sys.exit(2)
 
 def parse_opts(opts):
-    global docker_image, debug, machine, cluster, output
+    global docker_image, kubeconfig, cluster, output, debug
     if len(opts[0]) == 0:
         usage()
     for (key, value) in opts:
         if key == '-i' or key == '--image':
             docker_image = value
-        elif key == '-d' or key == '--debug':
-            debug = True
         elif key == '-c' or key == '--cluster':
             cluster = value
         elif key == '-o' or key == '--output':
             output = value
+        elif key == '-k' or key == '--kubeconfig':
+            kubeconfig = value
+        elif key == '-d' or key == '--debug':
+            debug = True
         else:
             usage()
     if not docker_image or not cluster or not output:
@@ -100,7 +103,7 @@ def validate_cluster(cluster):
     pass
 
 def init_k8s_client():
-    kubernetes.config.load_kube_config()
+    kubernetes.config.load_kube_config(config_file = kubeconfig)
     return kubernetes.client.CoreV1Api()
 
 def wait_until_pod_ready(kubernetes_client, namespace, pod_name, timeout = 60):
@@ -200,6 +203,7 @@ def deploy_monitoring(kubernetes_client, cluster):
     requests.post(url, auth = ('admin', 'admin'), headers = headers, data = json.dumps(payload))
 
 docker_image = None
+kubeconfig = None
 debug = False
 cluster = None
 output = None
@@ -207,7 +211,7 @@ healthy = True
 
 if __name__ == '__main__':
     try:
-        opts = getopt(sys.argv[1:], 'i:dc:o:u:', ['image=', 'debug', 'cluster=', 'output='])
+        opts = getopt(sys.argv[1:], 'i:k:c:o:d', ['image=', 'kubeconfig=', 'cluster=', 'output=', 'debug'])
         parse_opts(opts[0])
     except:
         usage()
