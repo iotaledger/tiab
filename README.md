@@ -38,14 +38,14 @@ defaults: &db_1
 nodes:
   nodeA: #name
     <<: *db_1
-    neighbours:
-      - nodeB
+    neighbors:
+      - udp://nodeB:14600
+      - tcp://bla.com:1234
   
   nodeB:
     <<: *db_1
-    neighbours:
-      - nodeA
-      - 8.8.8.8
+    neighbors:
+      - udp://nodeA:14600
 
 ```
 
