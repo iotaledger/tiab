@@ -250,8 +250,7 @@ if __name__ == '__main__':
     try:
         kubernetes_client.create_namespaced_config_map('default', tiab_entrypoint_configmap_resource, pretty = True)
     except kubernetes.client.rest.ApiException as e:
-        if json.loads(e.body)['reason'] == 'AlreadyExists': pass
-        else: raise e
+        if json.loads(e.body)['reason'] != 'AlreadyExists': raise e
 
     for (node, properties) in cluster['nodes'].iteritems():
         node_uuid = str(uuid4())
@@ -310,14 +309,17 @@ if __name__ == '__main__':
         else:
             cluster['nodes'][node]['host'] = pod.spec.node_name
             cluster['nodes'][node]['status'] = 'Running'
-            for neighbor in cluster['nodes'][node]['neighbors']:
-                m = re.match('^([a-z]+?)://([^:]+?):(\d+)$', neighbor)
-                protocol = m.group(1)
-                host = m.group(2)
-                port = m.group(3)
-                if host in cluster['nodes'].keys():
-                    host = cluster['nodes'][host]['clusterip']
-                add_node_neighbor(cluster['nodes'][node], protocol, host, port)
+            try:
+                for neighbor in cluster['nodes'][node]['neighbors']:
+                    m = re.match('^([a-z]+?)://([^:]+?):(\d+)$', neighbor)
+                    protocol = m.group(1)
+                    host = m.group(2)
+                    port = m.group(3)
+                    if host in cluster['nodes'].keys():
+                        host = cluster['nodes'][host]['clusterip']
+                    add_node_neighbor(cluster['nodes'][node], protocol, host, port)
+            except KeyError as e:
+                if e[0] != 'neighbors': raise e
         finally:
             cluster['nodes'][node]['log'] = kubernetes_client.read_namespaced_pod_log(cluster['nodes'][node]['podname'], 'default', pretty = True)
 
