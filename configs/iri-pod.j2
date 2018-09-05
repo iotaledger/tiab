@@ -7,45 +7,57 @@ metadata:
     nodenum: {{ NODE_NUMBER_PLACEHOLDER }}
     tag: {{ TAG_PLACEHOLDER }}
     uuid: {{ NODE_UUID_PLACEHOLDER }}
-
 spec:
   restartPolicy: Never
   containers:
-
-  - name: iri
-    image: {{ IRI_IMAGE_PLACEHOLDER }}
-    imagePullPolicy: Always
-    readinessProbe:
-      tcpSocket:
-        port: 14265
-    args:
-    - "--milestone-start"
-    - "0"
-    - "--snapshot"
-    - "/iri/data/snapshot.txt"
-    - "--testnet"
-    - "--testnet-coordinator"
-    - "BTCAAFIH9CJIVIMWFMIHKFNWRTLJRKSTMRCVRE9CIP9AEDTOULVFRHQZT9QAQBZXXAZGBNMVOOKTKAXTB"
-    - "--testnet-no-coo-validation"
-    env:
-    - name: IRI_DB_URL
-      value: {{ IRI_DB_URL_PLACEHOLDER }}
-    - name: IRI_DB_CHECKSUM
-      value: {{ IRI_DB_CHECKSUM_PLACEHOLDER }}
-    - name: JAVA_OPTIONS
-      value: "-agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=n"
-    ports:
-    # IRI API
-    - containerPort: 14265
-    # IRI Gossip
-    - containerPort: 15600
-    - containerPort: 14600
-      protocol: UDP
-    # Java Debugger
-    - containerPort: 8000
-    # JMX Prometheus
-    - containerPort: 5555
-    # ZMQ Feed
-    - containerPort: 5556
-    # JProfiler
-    - containerPort: 8849
+    - name: iri
+      image: {{ IRI_IMAGE_PLACEHOLDER }}
+      imagePullPolicy: Always
+      readinessProbe:
+        tcpSocket:
+          port: 14265
+      args:
+        - "--milestone-start"
+        - "0"
+        - "--snapshot"
+        - "/iri/data/snapshot.txt"
+        - "--testnet"
+        - "--testnet-coordinator"
+        - "BTCAAFIH9CJIVIMWFMIHKFNWRTLJRKSTMRCVRE9CIP9AEDTOULVFRHQZT9QAQBZXXAZGBNMVOOKTKAXTB"
+        - "--testnet-no-coo-validation"
+      volumeMounts:
+        - name: tiab-entrypoint
+          subPath: tiab-entrypoint.sh
+          mountPath: /tiab-entrypoint.sh
+      command:
+        - /tiab-entrypoint.sh
+      env:
+        - name: IRI_DB_URL
+          value: {{ IRI_DB_URL_PLACEHOLDER }}
+        - name: IRI_DB_CHECKSUM
+          value: {{ IRI_DB_CHECKSUM_PLACEHOLDER }}
+        - name: JAVA_OPTIONS
+          value: "-agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=n"
+      ports:
+        # IRI API
+        - containerPort: 14265
+        # IRI Gossip
+        - containerPort: 15600
+        - containerPort: 14600
+          protocol: UDP
+        # Java Debugger
+        - containerPort: 8000
+        # JMX Prometheus
+        - containerPort: 5555
+        # ZMQ Feed
+        - containerPort: 5556
+        # JProfiler
+        - containerPort: 8849
+  volumes:
+    - name: tiab-entrypoint
+      configMap:
+        name: tiab-entrypoint-{{ TAG_PLACEHOLDER }}
+        items:
+          - key: tiab-entrypoint.sh
+            path: tiab-entrypoint.sh
+            mode: 0555

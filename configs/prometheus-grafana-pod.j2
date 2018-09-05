@@ -5,33 +5,30 @@ metadata:
   labels:
     app: prometheus-grafana
     tag: {{ TAG_PLACEHOLDER }}
-
 spec:
   containers:
+    - name: prometheus
+      image: prom/prometheus:v2.3.1
+      readinessProbe:
+        tcpSocket:
+          port: 9090
+      volumeMounts:
+        - name: prometheus
+          subPath: prometheus.yml
+          mountPath: /etc/prometheus/prometheus.yml
+      ports:
+        # Prometheus export port
+        - containerPort: 9090
 
-  - name: prometheus
-    image: prom/prometheus:v2.3.1
-    readinessProbe:
-      tcpSocket:
-        port: 9090
-    volumeMounts:
-      - name: prometheus
-        subPath: prometheus.yml
-        mountPath: /etc/prometheus/prometheus.yml
-    ports:
-    # Prometheus export port
-    - containerPort: 9090
-
-  - name: grafana
-    image: grafana/grafana
-    readinessProbe:
-      tcpSocket:
-        port: 3000
-    ports:
-    # WebUI
-    - containerPort: 3000
-
+    - name: grafana
+      image: grafana/grafana
+      readinessProbe:
+        tcpSocket:
+          port: 3000
+      ports:
+        # WebUI
+        - containerPort: 3000
   volumes:
-  - name: prometheus
-    configMap:
-      name: prometheus-{{ TAG_PLACEHOLDER }}
+    - name: prometheus
+      configMap:
+        name: prometheus-{{ TAG_PLACEHOLDER }}

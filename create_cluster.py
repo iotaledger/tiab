@@ -236,30 +236,39 @@ if __name__ == '__main__':
     kubernetes_client = init_k8s_client()
     with open('configs/iri-pod.j2', 'r') as stream:
         iri_pod_template = Template(stream.read())
+    with open('configs/tiab-entrypoint-configmap.j2', 'r') as stream:
+        tiab_entrypoint_configmap_template = Template(stream.read())
     with open('configs/iri-service.j2', 'r') as stream:
         iri_service_template = Template(stream.read())
     with open('configs/iri-clusterip.j2', 'r') as stream:
         iri_clusterip_template = Template(stream.read())
 
+    tiab_entrypoint_configmap_resource = yaml.load(tiab_entrypoint_configmap_template.render(
+        TAG_PLACEHOLDER = tag
+    ))
+    kubernetes_client.create_namespaced_config_map('default', tiab_entrypoint_configmap_resource, pretty = True)
+
     for (node, properties) in cluster['nodes'].iteritems():
         node_uuid = str(uuid4())
-        service_resource = yaml.load(iri_service_template.render(
+        iri_service_resource = yaml.load(iri_service_template.render(
             TAG_PLACEHOLDER = tag,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
-        clusterip_resource = yaml.load(iri_clusterip_template.render(
+        iri_clusterip_resource = yaml.load(iri_clusterip_template.render(
             TAG_PLACEHOLDER = tag,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
+
+
 
         try:
             db_checksum = properties['db_checksum']
         except KeyError:
             db_checksum = ''
 
-        pod_resource = yaml.load(iri_pod_template.render(
+        iri_pod_resource = yaml.load(iri_pod_template.render(
             TAG_PLACEHOLDER = tag,
             IRI_IMAGE_PLACEHOLDER = docker_image,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
@@ -269,15 +278,15 @@ if __name__ == '__main__':
         ))
 
         print_message("Deploying %s" % node)
-        pod = kubernetes_client.create_namespaced_pod('default', pod_resource, pretty = True)
-        service = kubernetes_client.create_namespaced_service('default', service_resource, pretty = True)
-        clusterip = kubernetes_client.create_namespaced_service('default', clusterip_resource, pretty = True)
+        iri_pod = kubernetes_client.create_namespaced_pod('default', iri_pod_resource, pretty = True)
+        iri_service = kubernetes_client.create_namespaced_service('default', iri_service_resource, pretty = True)
+        clusterip = kubernetes_client.create_namespaced_service('default', iri_clusterip_resource, pretty = True)
 
         cluster['nodes'][node]['uuid'] = node_uuid
-        cluster['nodes'][node]['podname'] = pod.metadata.name
-        cluster['nodes'][node]['servicename'] = service.metadata.name
+        cluster['nodes'][node]['podname'] = iri_pod.metadata.name
+        cluster['nodes'][node]['servicename'] = iri_service.metadata.name
         cluster['nodes'][node]['clusteripname'] = clusterip.metadata.name
-        cluster['nodes'][node]['ports'] = { p.name: p.node_port for p in service.spec.ports }
+        cluster['nodes'][node]['ports'] = { p.name: p.node_port for p in iri_service.spec.ports }
         cluster['nodes'][node]['clusterip'] = clusterip.spec.cluster_ip
         cluster['nodes'][node]['clusterip_ports'] = { p.name: p.port for p in clusterip.spec.ports }
 
