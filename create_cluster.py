@@ -246,7 +246,12 @@ if __name__ == '__main__':
     tiab_entrypoint_configmap_resource = yaml.load(tiab_entrypoint_configmap_template.render(
         TAG_PLACEHOLDER = tag
     ))
-    kubernetes_client.create_namespaced_config_map('default', tiab_entrypoint_configmap_resource, pretty = True)
+
+    try:
+        kubernetes_client.create_namespaced_config_map('default', tiab_entrypoint_configmap_resource, pretty = True)
+    except kubernetes.client.rest.ApiException as e:
+        if json.loads(e.body)['reason'] == 'AlreadyExists': pass
+        else: raise e
 
     for (node, properties) in cluster['nodes'].iteritems():
         node_uuid = str(uuid4())
