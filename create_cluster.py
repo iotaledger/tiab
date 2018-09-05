@@ -47,7 +47,6 @@ def usage():
                 # -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
                 # -d / --debug              print debug information
         ''' % __file__)
-    sys.exit(2)
 
 def parse_opts(opts):
     global docker_image, tag, kubeconfig, cluster, output, debug
