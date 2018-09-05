@@ -59,10 +59,10 @@ The resulting `output.yml` file will contain all the data you need to connect to
 
 ## Teardown a cluster
 
-You can easily destroy all the resources associated to the cluster you just created by using the `teardown_cluster.sh` utility, and passing to it the tag you used to deploy the cluster.
+You can easily destroy all the resources associated to the cluster you just created by using the `teardown_cluster.py` utility, and passing to it the tag you used to deploy the cluster.
 
 ```bash
-$ ./teardown_cluster.sh --tag 1.5.3-deployment
+$ ./teardown_cluster.py --tag 1.5.3-deployment
 ```
 
 ## Monitoring capabilities (Alpha)
