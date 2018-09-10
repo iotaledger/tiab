@@ -78,19 +78,6 @@ def add_node_neighbor(node, protocol, host, port):
               }
     requests.post(url, headers = api_headers, data = json.dumps(payload))
 
-def add_node_mutual_neighbor(nodeA, nodeB):
-    add_node_neighbor(nodeA, nodeB)
-    add_node_neighbor(nodeB, nodeA)
-
-def chain_topology(nodes):
-    for i in range(0, len(nodes) - 1):
-        add_node_mutual_neighbor(nodes[i], nodes[i + 1])
-    
-def all_to_all_topology():
-    for i in range(0, len(nodes)):
-        for j in range(i + 1, len(nodes)):
-            add_node_mutual_neighbor(nodes[i], nodes[j])
-
 def wait_until_iri_api_is_healthy(node):
     url = 'http://%s:%s' % (node.api, node.api_port)
     payload = {
@@ -263,8 +250,6 @@ if __name__ == '__main__':
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
-
-
 
         try:
             db_checksum = properties['db_checksum']
