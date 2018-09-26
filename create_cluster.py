@@ -265,6 +265,26 @@ if __name__ == '__main__':
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
 
+        iri_container = [e for e in iri_pod_resource['spec']['containers'] if e['name'] == 'iri'][0]
+
+        try:
+            if properties['iri_args']:
+                if type(properties['iri_args']) is list:
+                    iri_container['args'] = properties['iri_args']
+                else:
+                    raise RuntimeError('iri_args for node %s is not an array' % node)
+        except KeyError as e:
+            if e[0] != 'iri_args': raise e
+
+        try:
+            if properties['java_options']:
+                if type(properties['java_options']) is str:
+                    [e for e in iri_container['env'] if e['name'] == 'JAVA_OPTIONS'][0]['value'] = properties['java_options']
+                else:
+                    raise RuntimeError('java_options for node %s is not a string' % node)
+        except KeyError as e:
+            if e[0] != 'java_options': raise e
+
         print_message("Deploying %s" % node)
         iri_pod = kubernetes_client.create_namespaced_pod('default', iri_pod_resource, pretty = True)
         iri_service = kubernetes_client.create_namespaced_service('default', iri_service_resource, pretty = True)
