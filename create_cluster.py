@@ -309,21 +309,24 @@ if __name__ == '__main__':
             healthy = False
             cluster['nodes'][node]['status'] = 'Error'
         else:
+            cluster['nodes'][node]['podip'] = pod.status.pod_ip
             cluster['nodes'][node]['host'] = pod.spec.node_name
             cluster['nodes'][node]['status'] = 'Running'
-            try:
-                for neighbor in cluster['nodes'][node]['neighbors']:
-                    m = re.match('^([a-z]+?)://([^:]+?):(\d+)$', neighbor)
-                    protocol = m.group(1)
-                    host = m.group(2)
-                    port = m.group(3)
-                    if host in cluster['nodes'].keys():
-                        host = cluster['nodes'][host]['clusterip']
-                    add_node_neighbor(cluster['nodes'][node], protocol, host, port)
-            except KeyError as e:
-                if e[0] != 'neighbors': raise e
         finally:
             cluster['nodes'][node]['log'] = kubernetes_client.read_namespaced_pod_log(cluster['nodes'][node]['podname'], 'default', pretty = True)
+
+    for node in cluster['nodes'].keys():
+        try:
+            for neighbor in cluster['nodes'][node]['neighbors']:
+                m = re.match('^([a-z]+?)://([^:]+?):(\d+)$', neighbor)
+                protocol = m.group(1)
+                host = m.group(2)
+                port = m.group(3)
+                if host in cluster['nodes'].keys():
+                    host = cluster['nodes'][host]['podip']
+                add_node_neighbor(cluster['nodes'][node], protocol, host, port)
+        except KeyError as e:
+            if e[0] != 'neighbors': raise e
 
     if healthy:
         success(output, cluster)
