@@ -9,7 +9,6 @@ import os
 import sys
 import copy
 import time
-import subprocess
 import requests
 import kubernetes
 from uuid import uuid4
