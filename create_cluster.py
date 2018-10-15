@@ -37,18 +37,19 @@ def fail(output, cluster):
     sys.exit(2)
 
 def usage():
-    die('''     %s -i repo/image:latest -t tag -c cluster.yml -o output.yml [-k kube.config] [-d --debug]
+    die('''     %s -i repo/image:latest -t tag -c cluster.yml -o output.yml [-k kube.config] [-n namespace] [-d --debug]
     
                 # -i / --image              Docker IRI image to use, relative to Hub
                 # -t / --tag                ID to tag the deployment with
                 # -c / --cluster            cluster definition in YAML format
                 # -o / --output             output file for node information in YAML format
+                # -n / --namespace          Kubernetes namespace to use for your cluster deployment
                 # -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
                 # -d / --debug              print debug information
         ''' % __file__)
 
 def parse_opts(opts):
-    global docker_image, tag, kubeconfig, cluster, output, debug
+    global docker_image, tag, kubeconfig, cluster, output, debug, namespace
     if len(opts[0]) == 0:
         usage()
     for (key, value) in opts:
@@ -62,6 +63,8 @@ def parse_opts(opts):
             kubeconfig = value
         elif key == '-t' or key == '--tag':
             tag = value
+        elif key == '-n' or key == '--namespace':
+            namespace = value
         elif key == '-d' or key == '--debug':
             debug = True
         else:
@@ -140,9 +143,9 @@ def deploy_monitoring(kubernetes_client, cluster):
             NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
         ))
         tanglescope_configmap_resource['data']['tanglescope.yml'] = tanglescope_config
-        kubernetes_client.create_namespaced_config_map('default', tanglescope_configmap_resource, pretty = True)
-        pod = kubernetes_client.create_namespaced_pod('default', tanglescope_pod_resource, pretty = True)
-        clusterip = kubernetes_client.create_namespaced_service('default', tanglescope_clusterip_resource, pretty = True)
+        kubernetes_client.create_namespaced_config_map(namespace, tanglescope_configmap_resource, pretty = True)
+        pod = kubernetes_client.create_namespaced_pod(namespace, tanglescope_pod_resource, pretty = True)
+        clusterip = kubernetes_client.create_namespaced_service(namespace, tanglescope_clusterip_resource, pretty = True)
 
         cluster['nodes'][node]['tanglescope_podname'] = pod.metadata.name
         cluster['nodes'][node]['tanglescope_clusteripname'] = clusterip.metadata.name
@@ -163,15 +166,15 @@ def deploy_monitoring(kubernetes_client, cluster):
         TAG_PLACEHOLDER = tag
     ))
     prometheus_configmap_resource['data']['prometheus.yml'] = prometheus_config
-    kubernetes_client.create_namespaced_config_map('default', prometheus_configmap_resource, pretty = True)
-    pod = kubernetes_client.create_namespaced_pod('default', prometheus_grafana_pod_resource, pretty = True)
-    service = kubernetes_client.create_namespaced_service('default', prometheus_grafana_service_resource, pretty = True)
+    kubernetes_client.create_namespaced_config_map(namespace, prometheus_configmap_resource, pretty = True)
+    pod = kubernetes_client.create_namespaced_pod(namespace, prometheus_grafana_pod_resource, pretty = True)
+    service = kubernetes_client.create_namespaced_service(namespace, prometheus_grafana_service_resource, pretty = True)
 
     cluster['grafana_podname'] = pod.metadata.name
     cluster['grafana_servicename'] = service.metadata.name
     cluster['grafana_port'] = service.spec.ports[0].node_port
 
-    pod = wait_until_pod_ready(kubernetes_client, 'default', cluster['grafana_podname'])
+    pod = wait_until_pod_ready(kubernetes_client, namespace, cluster['grafana_podname'])
     cluster['grafana_host'] = pod.spec.node_name
 
     url = 'http://%s:%s/api/datasources' % (cluster['grafana_host'], cluster['grafana_port'])
@@ -191,6 +194,7 @@ def deploy_monitoring(kubernetes_client, cluster):
     requests.post(url, auth = ('admin', 'admin'), headers = headers, data = json.dumps(payload))
 
 docker_image = None
+namespace = 'default'
 tag = None
 kubeconfig = None
 debug = False
@@ -200,7 +204,7 @@ healthy = True
 
 if __name__ == '__main__':
     try:
-        opts = getopt(sys.argv[1:], 'i:t:k:c:o:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'output=', 'debug'])
+        opts = getopt(sys.argv[1:], 'i:t:k:c:n:o:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'namespace=', 'output=', 'debug'])
         parse_opts(opts[0])
     except:
         usage()
@@ -233,7 +237,7 @@ if __name__ == '__main__':
     ))
 
     try:
-        kubernetes_client.create_namespaced_config_map('default', tiab_entrypoint_configmap_resource, pretty = True)
+        kubernetes_client.create_namespaced_config_map(namespace, tiab_entrypoint_configmap_resource, pretty = True)
     except kubernetes.client.rest.ApiException as e:
         if json.loads(e.body)['reason'] != 'AlreadyExists': raise e
 
@@ -283,9 +287,9 @@ if __name__ == '__main__':
             if e[0] != 'java_options': raise e
 
         print_message("Deploying %s" % node)
-        iri_pod = kubernetes_client.create_namespaced_pod('default', iri_pod_resource, pretty = True)
-        iri_service = kubernetes_client.create_namespaced_service('default', iri_service_resource, pretty = True)
-        clusterip = kubernetes_client.create_namespaced_service('default', iri_clusterip_resource, pretty = True)
+        iri_pod = kubernetes_client.create_namespaced_pod(namespace, iri_pod_resource, pretty = True)
+        iri_service = kubernetes_client.create_namespaced_service(namespace, iri_service_resource, pretty = True)
+        clusterip = kubernetes_client.create_namespaced_service(namespace, iri_clusterip_resource, pretty = True)
 
         cluster['nodes'][node]['uuid'] = node_uuid
         cluster['nodes'][node]['podname'] = iri_pod.metadata.name
@@ -303,7 +307,7 @@ if __name__ == '__main__':
 
     for node in cluster['nodes'].keys():
         try:
-            pod = wait_until_pod_ready(kubernetes_client, 'default', cluster['nodes'][node]['podname'])
+            pod = wait_until_pod_ready(kubernetes_client, namespace, cluster['nodes'][node]['podname'])
         except RuntimeError:
             healthy = False
             cluster['nodes'][node]['status'] = 'Error'
@@ -312,7 +316,7 @@ if __name__ == '__main__':
             cluster['nodes'][node]['host'] = pod.spec.node_name
             cluster['nodes'][node]['status'] = 'Running'
         finally:
-            cluster['nodes'][node]['log'] = kubernetes_client.read_namespaced_pod_log(cluster['nodes'][node]['podname'], 'default', pretty = True)
+            cluster['nodes'][node]['log'] = kubernetes_client.read_namespaced_pod_log(cluster['nodes'][node]['podname'], namespace, pretty = True)
 
     for node in cluster['nodes'].keys():
         try:
