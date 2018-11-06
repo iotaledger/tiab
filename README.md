@@ -25,6 +25,7 @@ $ pip install -r requirements.txt
 -c / --cluster            cluster definition in YAML format
 -o / --output             output file for node information in YAML format
 -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
+-n / --namespace          Kubernetes namespace you want to deploy the cluster to
 -d / --debug              print debug information
 ```
 
@@ -60,7 +61,7 @@ A node definition yaml supports the following properties:
 ## Example Usage
 
 ```bash
-$ ./create_cluster.py --image iotacafe/iri-dev:8d32b7c-29 --tag 1.5.3-deployment --cluster config.yml --output output.yml 
+$ ./create_cluster.py --image iotacafe/iri-dev:8d32b7c-29 --tag 1.5.3-deployment --namespace diego --cluster config.yml --output output.yml
 ```
 
 The resulting `output.yml` file will contain all the data you need to connect to your nodes.
