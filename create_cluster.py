@@ -97,7 +97,7 @@ def init_k8s_client():
     kubernetes.config.load_kube_config(config_file = kubeconfig)
     return kubernetes.client.CoreV1Api()
 
-def wait_until_pod_ready(kubernetes_client, namespace, pod_name, timeout = 120):
+def wait_until_pod_ready(kubernetes_client, namespace, pod_name, timeout = 600):
     for _ in range(0, timeout):
         pod = kubernetes_client.read_namespaced_pod(pod_name, namespace)
         if pod.status.phase == 'Failed':
