@@ -22,12 +22,28 @@ data:
       rm -rf /iri/data/spamnet*
       rm -rf /iri/data/testnet*
       rm -rf /iri/data/mainnet*
-      ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'db/' | grep -E '^d'  | awk '{print $6}')
-      STRIP_COMPONENTS=$(echo $ARCHIVE_SUBPATH | awk -F'/' '{print NF-2}')
-      tar xfv /tmp/db.tar --strip-components=$STRIP_COMPONENTS -C /iri/data $ARCHIVE_SUBPATH
-      SNAPSHOT_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'snapshot.txt' | awk '{print $6}')
+
+      ADDRESSES_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'spent-addresses-db/' | grep -E '^d'  | awk '{print $6}')
+      STRIP_COMPONENTS=$(echo $ADDRESSES_ARCHIVE_SUBPATH | awk -F '/' '{print NF-2}')
+      tar xfv /tmp/db.tar --strip-components=$STRIP_COMPONENTS -C /iri/data $ADDRESSES_ARCHIVE_SUBPATH
+
+      SPAMNET_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'spamnetdb/' | grep -E '^d'  | awk '{print $6}')
+      STRIP_COMPONENTS=$(echo $SPAMNET_ARCHIVE_SUBPATH | awk -F '/' '{print NF-2}')
+      tar xfv /tmp/db.tar --strip-components=$STRIP_COMPONENTS -C /iri/data $SPAMNET_ARCHIVE_SUBPATH
+
+      TESTNET_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'testnetdb/' | grep -E '^d'  | awk '{print $6}')
+      STRIP_COMPONENTS=$(echo $TESTNET_ARCHIVE_SUBPATH | awk -F '/' '{print NF-2}')
+      tar xfv /tmp/db.tar --strip-components=$STRIP_COMPONENTS -C /iri/data $TESTNET_ARCHIVE_SUBPATH
+
+      MAINNET_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'mainnetdb/' | grep -E '^d'  | awk '{print $6}')
+      STRIP_COMPONENTS=$(echo $MAINNET_ARCHIVE_SUBPATH | awk -F '/' '{print NF-2}')
+      tar xfv /tmp/db.tar --strip-components=$STRIP_COMPONENTS -C /iri/data $MAINNET_ARCHIVE_SUBPATH
+
+      SNAPSHOT_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'snapshot.' | awk '{print $6}')
       SNAPSHOT_STRIP_COMPONENTS=$(echo $SNAPSHOT_ARCHIVE_SUBPATH | awk -F'/' '{print NF-1}')
       tar xfv /tmp/db.tar --strip-components=$SNAPSHOT_STRIP_COMPONENTS -C /iri/data $SNAPSHOT_ARCHIVE_SUBPATH
+
     fi
 
     /entrypoint.sh "$@"
+
