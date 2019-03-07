@@ -22,9 +22,11 @@ spec:
         - "--snapshot"
         - "/iri/data/snapshot.txt"
         - "--testnet"
+        - "true"
         - "--testnet-coordinator"
         - "BTCAAFIH9CJIVIMWFMIHKFNWRTLJRKSTMRCVRE9CIP9AEDTOULVFRHQZT9QAQBZXXAZGBNMVOOKTKAXTB"
         - "--testnet-no-coo-validation"
+        - "true"
       volumeMounts:
         - name: tiab-entrypoint
           subPath: tiab-entrypoint.sh
