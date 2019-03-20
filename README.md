@@ -56,7 +56,8 @@ A node definition yaml supports the following properties:
 
 * `neighbors`: an array of neighbors to add to the specific node once started;
 * `iri_args`: an array of the arguments to be passed to IRI command line, overriding container's defaults;
-* `java_options`: a string of extra JVM options to be passed to the IRI container, overriding container's defaults.
+* `java_options`: a string of extra JVM options to be passed to the IRI container, overriding container's defaults;
+* `ixis`: an array of URLs to tarballs containing IXI modules.
 
 ## Example Usage
 
