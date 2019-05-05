@@ -45,21 +45,13 @@ data:
 
     fi
 
-    http_url_regex='https?://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]'
-    for ixi in $IXIS; do
-      # Remote IXI module in tar format
-      if [[ $ixi =~ $http_url_regex ]]; then
-        TEMP_FILE=$(mktemp)
-        wget $ixi -O $TEMP_FILE
-        MODULE_NAME=$(tar tfv $TEMP_FILE | head -n1 | awk '{print $6}' | sed -r 's/^(.+)\.ixi.+$/\1/')
-        mkdir -p /iri/data/ixi/$MODULE_NAME
-        tar xfv $TEMP_FILE --strip-components=1 -C /iri/data/ixi/$MODULE_NAME
-        rm $TEMP_FILE
-      # Must be a dir then
-      else
-        MODULE_NAME=$(echo -n $ixi | sed -r 's#.+(/|\\)([^\\/]+)\.ixi.+#\2#')
-        cp -arv $iri /mnt/data/ixi/$MODULE_NAME
-      fi
+    for ixi_url in $IXI_URLS; do
+      TEMP_FILE=$(mktemp)
+      wget $ixi_url -O $TEMP_FILE
+      MODULE_NAME=$(tar tfv $TEMP_FILE | head -n1 | awk '{print $6}' | sed -r 's/^(.+)\.ixi.+$/\1/')
+      mkdir -p /iri/data/ixi/$MODULE_NAME
+      tar xfv $TEMP_FILE --strip-components=1 -C /iri/data/ixi/$MODULE_NAME
+      rm $TEMP_FILE
     done
 
     /entrypoint.sh "$@"

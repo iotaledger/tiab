@@ -265,7 +265,7 @@ if __name__ == '__main__':
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             IRI_DB_URL_PLACEHOLDER = properties['db'],
             IRI_DB_CHECKSUM_PLACEHOLDER = db_checksum,
-            IXIS_PLACEHOLDER = ' '.join(properties['ixis']) if properties.has_key('ixis') else '',
+            IXI_URLS_PLACEHOLDER = ' '.join(properties['ixis']) if properties.has_key('ixis') else '',
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
 
