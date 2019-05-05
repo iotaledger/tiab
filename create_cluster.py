@@ -9,11 +9,13 @@ import os
 import sys
 import copy
 import time
+import tarfile
 import requests
 import kubernetes
 from uuid import uuid4
 from getopt import getopt
 from jinja2 import Template
+from tempfile import TemporaryFile
 
 api_headers = {
                 'X-IOTA-API-Version': '1',
@@ -97,6 +99,16 @@ def init_k8s_client():
     kubernetes.config.load_kube_config(config_file = kubeconfig)
     return kubernetes.client.CoreV1Api()
 
+def wait_until_pod_running(kubernetes_client, namespace, pod_name, timeout = 600):
+    for _ in range(0, timeout):
+        pod = kubernetes_client.read_namespaced_pod(pod_name, namespace)
+        if pod.status.phase == 'Running':
+            return True
+        elif pod.status.phase == 'Failed':
+            break
+        time.sleep(1)
+    raise RuntimeError('Pod did not run correctly.')
+
 def wait_until_pod_ready(kubernetes_client, namespace, pod_name, timeout = 600):
     for _ in range(0, timeout):
         pod = kubernetes_client.read_namespaced_pod(pod_name, namespace)
@@ -110,6 +122,32 @@ def wait_until_pod_ready(kubernetes_client, namespace, pod_name, timeout = 600):
         finally:
             time.sleep(1)
     raise RuntimeError('Pod did not start correctly.')
+
+def make_tarfile(source_dir):
+    with TemporaryFile() as tar_buffer:
+        with tarfile.open(fileobj = tar_buffer, mode = "w:gz") as tar:
+            tar.add(source_dir, arcname = os.path.basename(source_dir))
+        tar_buffer.seek(0)
+        return tar_buffer.read()
+
+def upload_ixi_modules(kubernetes_client, node):
+    upload_command = ['tar', 'zxvf', '-', '-C', '/iri/data/ixi']
+    wait_until_pod_running(kubernetes_client, namespace, node['podname'])
+    kubernetes_client.connect_get_namespaced_pod_exec(node['podname'], namespace, command = [ 'mkdir', '-p', '/iri/data/ixi' ])
+
+    for ixi_path in node['upload_ixis_paths']:
+        print_message("Uploading IXI path %s" % ixi_path)
+        upload_data = make_tarfile(ixi_path)
+        socket = stream(kubernetes_client.connect_get_namespaced_pod_exec,
+                  node['podname'],
+                  namespace,
+                  command = upload_command,
+                  stderr = True, stdin = True,
+                  stdout = True, tty = False,
+                  _preload_content=False
+                 )
+        socket.write_stdin(upload_data)
+        socket.close()
 
 def deploy_monitoring(kubernetes_client, cluster):
     with open('configs/tanglescope.j2', 'r') as stream:
@@ -241,6 +279,8 @@ if __name__ == '__main__':
     except kubernetes.client.rest.ApiException as e:
         if json.loads(e.body)['reason'] != 'AlreadyExists': raise e
 
+    http_url_regex = re.compile('https?://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]')
+
     for (node, properties) in cluster['nodes'].iteritems():
         node_uuid = str(uuid4())
         iri_service_resource = yaml.load(iri_service_template.render(
@@ -265,7 +305,8 @@ if __name__ == '__main__':
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             IRI_DB_URL_PLACEHOLDER = properties['db'],
             IRI_DB_CHECKSUM_PLACEHOLDER = db_checksum,
-            IXI_URLS_PLACEHOLDER = ' '.join(properties['ixis']) if properties.has_key('ixis') else '',
+            # Pass only the IXI modules that are downloaded URLs
+            IXI_URLS_PLACEHOLDER = ' '.join(filter(http_url_regex.match, properties['ixis'])) if properties.has_key('ixis') else '',
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
 
@@ -299,6 +340,7 @@ if __name__ == '__main__':
         cluster['nodes'][node]['ports'] = { p.name: p.node_port for p in iri_service.spec.ports }
         cluster['nodes'][node]['clusterip'] = clusterip.spec.cluster_ip
         cluster['nodes'][node]['clusterip_ports'] = { p.name: p.port for p in clusterip.spec.ports }
+        cluster['nodes'][node]['upload_ixis_paths'] = filter(lambda path: not http_url_regex.match(path), properties['ixis']) if properties.has_key('ixis') else []
 
     try:
         if cluster['monitoring']:
@@ -308,6 +350,8 @@ if __name__ == '__main__':
 
     for node in cluster['nodes'].keys():
         try:
+            if cluster['nodes'][node]['upload_ixis_paths']:
+                upload_ixi_modules(kubernetes_client, cluster['nodes'][node])
             pod = wait_until_pod_ready(kubernetes_client, namespace, cluster['nodes'][node]['podname'])
         except RuntimeError:
             healthy = False
