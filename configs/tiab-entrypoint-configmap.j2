@@ -42,9 +42,6 @@ data:
       SNAPSHOT_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'snapshot.' | awk '{print $6}')
       SNAPSHOT_STRIP_COMPONENTS=$(echo $SNAPSHOT_ARCHIVE_SUBPATH | awk -F'/' '{print NF-1}')
       tar xfv /tmp/db.tar --strip-components=$SNAPSHOT_STRIP_COMPONENTS -C /iri/data $SNAPSHOT_ARCHIVE_SUBPATH
-    else
-      # There is a race condition with the IXI module upload if we do not spend time downloading a database
-      sleep 5
     fi
 
     for ixi_url in $IXI_URLS; do
@@ -55,6 +52,13 @@ data:
       tar xfv $TEMP_FILE --strip-components=1 -C /iri/data/ixi/$MODULE_NAME
       rm $TEMP_FILE
     done
+
+    # There is a race condition with the IXI module upload if we do not spend time downloading a database
+    if [ $LOCAL_IXIS = "yes" ]; then
+      while [ ! -d /iri/data/ixi ]; do
+        sleep 5
+      done
+    fi
 
     /entrypoint.sh "$@"
 

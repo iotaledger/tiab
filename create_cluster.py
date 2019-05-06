@@ -304,6 +304,8 @@ if __name__ == '__main__':
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
 
+        cluster['nodes'][node]['upload_ixis_paths'] = filter(lambda path: not http_url_regex.match(path), properties['ixis']) if properties.has_key('ixis') else []
+
         iri_pod_resource = yaml.load(iri_pod_template.render(
             TAG_PLACEHOLDER = tag,
             IRI_IMAGE_PLACEHOLDER = docker_image,
@@ -312,7 +314,8 @@ if __name__ == '__main__':
             IRI_DB_CHECKSUM_PLACEHOLDER = properties['db_checksum'] if properties.has_key('db_checksum') else '',
             # Pass only the IXI modules that are downloaded URLs
             IXI_URLS_PLACEHOLDER = ' '.join(filter(http_url_regex.match, properties['ixis'])) if properties.has_key('ixis') else '',
-            NODE_UUID_PLACEHOLDER = node_uuid
+            NODE_UUID_PLACEHOLDER = node_uuid,
+            LOCAL_IXIS_PLACEHOLDER = 'yes' if cluster['nodes'][node]['upload_ixis_paths'] else 'no'
         ))
 
         iri_container = [e for e in iri_pod_resource['spec']['containers'] if e['name'] == 'iri'][0]
@@ -345,7 +348,6 @@ if __name__ == '__main__':
         cluster['nodes'][node]['ports'] = { p.name: p.node_port for p in iri_service.spec.ports }
         cluster['nodes'][node]['clusterip'] = clusterip.spec.cluster_ip
         cluster['nodes'][node]['clusterip_ports'] = { p.name: p.port for p in clusterip.spec.ports }
-        cluster['nodes'][node]['upload_ixis_paths'] = filter(lambda path: not http_url_regex.match(path), properties['ixis']) if properties.has_key('ixis') else []
 
     try:
         if cluster['monitoring']:
