@@ -136,7 +136,9 @@ def upload_ixi_modules(kubernetes_client, node):
     kubernetes.stream.stream(kubernetes_client.connect_get_namespaced_pod_exec,
                               node['podname'],
                               namespace,
-                              command = [ 'mkdir', '-p', '/iri/data/ixi' ]
+                              command = [ 'mkdir', '-p', '/iri/data/ixi' ],
+                              stderr=False, stdin=False,
+                              stdout=True, tty=False
                             )
 
     for ixi_path in node['upload_ixis_paths']:
