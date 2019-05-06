@@ -145,7 +145,7 @@ def upload_ixi_modules(kubernetes_client, node):
                             )
 
     for ixi_path in node['upload_ixis_paths']:
-        print_message("Uploading IXI path %s" % ixi_path)
+        print_message("Uploading IXI path %s to %s" % (ixi_path, node['podname']))
         upload_data = make_tarfile(ixi_path)
         socket = kubernetes.stream.stream(kubernetes_client.connect_get_namespaced_pod_exec,
                                            node['podname'],
@@ -315,7 +315,7 @@ if __name__ == '__main__':
             # Pass only the IXI modules that are downloaded URLs
             IXI_URLS_PLACEHOLDER = ' '.join(filter(http_url_regex.match, properties['ixis'])) if properties.has_key('ixis') else '',
             NODE_UUID_PLACEHOLDER = node_uuid,
-            LOCAL_IXIS_PLACEHOLDER = 'yes' if cluster['nodes'][node]['upload_ixis_paths'] else 'no'
+            LOCAL_IXIS_PLACEHOLDER = 'xyes' if cluster['nodes'][node]['upload_ixis_paths'] else 'xno'
         ))
 
         iri_container = [e for e in iri_pod_resource['spec']['containers'] if e['name'] == 'iri'][0]

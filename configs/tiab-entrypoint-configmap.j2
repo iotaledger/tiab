@@ -54,7 +54,7 @@ data:
     done
 
     # There is a race condition with the IXI module upload if we do not spend time downloading a database
-    if [ $LOCAL_IXIS = "yes" ]; then
+    if [ $LOCAL_IXIS = "xyes" ]; then
       while [ ! -d /iri/data/ixi ]; do
         sleep 5
       done
