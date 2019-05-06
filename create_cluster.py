@@ -47,11 +47,12 @@ def usage():
                 # -o / --output             output file for node information in YAML format
                 # -n / --namespace          Kubernetes namespace to use for your cluster deployment
                 # -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
+                # -x / --ixis               Base path for IXI modules to be specified in cluster configuration
                 # -d / --debug              print debug information
         ''' % __file__)
 
 def parse_opts(opts):
-    global docker_image, tag, kubeconfig, cluster, output, debug, namespace
+    global docker_image, tag, kubeconfig, cluster, output, debug, namespace, ixis_path
     if len(opts[0]) == 0:
         usage()
     for (key, value) in opts:
@@ -67,6 +68,8 @@ def parse_opts(opts):
             tag = value
         elif key == '-n' or key == '--namespace':
             namespace = value
+        elif key == '-x' or key == '--ixis':
+            ixis_path = value
         elif key == '-d' or key == '--debug':
             debug = True
         else:
@@ -126,7 +129,7 @@ def wait_until_pod_ready(kubernetes_client, namespace, pod_name, timeout = 600):
 def make_tarfile(source_dir):
     with TemporaryFile() as tar_buffer:
         with tarfile.open(fileobj = tar_buffer, mode = "w:gz") as tar:
-            tar.add(source_dir, arcname = os.path.basename(source_dir))
+            tar.add(os.path.join(ixis_path, source_dir), arcname = os.path.basename(source_dir))
         tar_buffer.seek(0)
         return tar_buffer.read()
 
@@ -244,11 +247,12 @@ kubeconfig = None
 debug = False
 cluster = None
 output = None
+ixis_path = os.getcwd()
 healthy = True
 
 if __name__ == '__main__':
     try:
-        opts = getopt(sys.argv[1:], 'i:t:k:c:n:o:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'namespace=', 'output=', 'debug'])
+        opts = getopt(sys.argv[1:], 'i:t:k:c:n:o:x:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'namespace=', 'output=', 'ixis=', 'debug'])
         parse_opts(opts[0])
     except:
         usage()
