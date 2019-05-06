@@ -26,6 +26,7 @@ $ pip install -r requirements.txt
 -o / --output             output file for node information in YAML format
 -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
 -n / --namespace          Kubernetes namespace you want to deploy the cluster to
+-x / --ixis               Base path for IXI modules to be specified in cluster configuration, defaults to CWD
 -d / --debug              print debug information
 ```
 
@@ -57,7 +58,7 @@ A node definition yaml supports the following properties:
 * `neighbors`: an array of neighbors to add to the specific node once started;
 * `iri_args`: an array of the arguments to be passed to IRI command line, overriding container's defaults;
 * `java_options`: a string of extra JVM options to be passed to the IRI container, overriding container's defaults;
-* `ixis`: an array of URLs to tarballs or paths to directories (relative or absolute) containing IXI modules; please note that the IXI folder name should contain the `.ixi` suffix (eg. `Snapshot.ixi`).
+* `ixis`: an array of URLs to tarballs or paths to directories (relative to the --ixis option) containing IXI modules; please note that the IXI folder name should contain the `.ixi` suffix (eg. `Snapshot.ixi`).
 
 ## Example Usage
 
