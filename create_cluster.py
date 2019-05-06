@@ -140,8 +140,8 @@ def upload_ixi_modules(kubernetes_client, node):
                               node['podname'],
                               namespace,
                               command = [ 'mkdir', '-p', '/iri/data/ixi' ],
-                              stderr=False, stdin=False,
-                              stdout=True, tty=False
+                              stderr = False, stdin = False,
+                              stdout = True, tty = False
                             )
 
     for ixi_path in node['upload_ixis_paths']:
@@ -153,7 +153,7 @@ def upload_ixi_modules(kubernetes_client, node):
                                            command = upload_command,
                                            stderr = True, stdin = True,
                                            stdout = True, tty = False,
-                                           _preload_content=False
+                                           _preload_content = False
                                          )
         socket.write_stdin(upload_data)
         socket.close()
