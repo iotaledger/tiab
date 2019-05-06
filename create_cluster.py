@@ -133,19 +133,23 @@ def make_tarfile(source_dir):
 def upload_ixi_modules(kubernetes_client, node):
     upload_command = ['tar', 'zxvf', '-', '-C', '/iri/data/ixi']
     wait_until_pod_running(kubernetes_client, namespace, node['podname'])
-    kubernetes_client.connect_get_namespaced_pod_exec(node['podname'], namespace, command = [ 'mkdir', '-p', '/iri/data/ixi' ])
+    kubernetes.stream.stream(kubernetes_client.connect_get_namespaced_pod_exec,
+                              node['podname'],
+                              namespace,
+                              command = [ 'mkdir', '-p', '/iri/data/ixi' ]
+                            )
 
     for ixi_path in node['upload_ixis_paths']:
         print_message("Uploading IXI path %s" % ixi_path)
         upload_data = make_tarfile(ixi_path)
-        socket = stream(kubernetes_client.connect_get_namespaced_pod_exec,
-                  node['podname'],
-                  namespace,
-                  command = upload_command,
-                  stderr = True, stdin = True,
-                  stdout = True, tty = False,
-                  _preload_content=False
-                 )
+        socket = kubernetes.stream.stream(kubernetes_client.connect_get_namespaced_pod_exec,
+                                           node['podname'],
+                                           namespace,
+                                           command = upload_command,
+                                           stderr = True, stdin = True,
+                                           stdout = True, tty = False,
+                                           _preload_content=False
+                                         )
         socket.write_stdin(upload_data)
         socket.close()
 
