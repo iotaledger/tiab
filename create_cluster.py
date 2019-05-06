@@ -294,17 +294,12 @@ if __name__ == '__main__':
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
 
-        try:
-            db_checksum = properties['db_checksum']
-        except KeyError:
-            db_checksum = ''
-
         iri_pod_resource = yaml.load(iri_pod_template.render(
             TAG_PLACEHOLDER = tag,
             IRI_IMAGE_PLACEHOLDER = docker_image,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
-            IRI_DB_URL_PLACEHOLDER = properties['db'],
-            IRI_DB_CHECKSUM_PLACEHOLDER = db_checksum,
+            IRI_DB_URL_PLACEHOLDER = properties['db'] if properties.has_key('db') else '',
+            IRI_DB_CHECKSUM_PLACEHOLDER = properties['db_checksum'] if properties.has_key('db_checksum') else '',
             # Pass only the IXI modules that are downloaded URLs
             IXI_URLS_PLACEHOLDER = ' '.join(filter(http_url_regex.match, properties['ixis'])) if properties.has_key('ixis') else '',
             NODE_UUID_PLACEHOLDER = node_uuid
