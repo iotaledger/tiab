@@ -48,11 +48,12 @@ def usage():
                 # -n / --namespace          Kubernetes namespace to use for your cluster deployment
                 # -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
                 # -x / --ixis               Base path for IXI modules to be specified in cluster configuration
+                # -e / --extras             Additional commands to be run at pod creation
                 # -d / --debug              print debug information
         ''' % __file__)
 
 def parse_opts(opts):
-    global docker_image, tag, kubeconfig, cluster, output, debug, namespace, ixis_path
+    global docker_image, tag, kubeconfig, cluster, output, debug, namespace, ixis_path, extras_cmd
     if len(opts[0]) == 0:
         usage()
     for (key, value) in opts:
@@ -70,6 +71,8 @@ def parse_opts(opts):
             namespace = value
         elif key == '-x' or key == '--ixis':
             ixis_path = value
+        elif key == '-e' or key == '--extras':
+            extras_cmd = value
         elif key == '-d' or key == '--debug':
             debug = True
         else:
@@ -252,7 +255,7 @@ healthy = True
 
 if __name__ == '__main__':
     try:
-        opts = getopt(sys.argv[1:], 'i:t:k:c:n:o:x:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'namespace=', 'output=', 'ixis=', 'debug'])
+        opts = getopt(sys.argv[1:], 'i:t:k:c:n:o:x:e:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'namespace=', 'output=', 'ixis=', 'extras_cmd=','debug'])
         parse_opts(opts[0])
     except:
         usage()
@@ -281,7 +284,8 @@ if __name__ == '__main__':
         iri_clusterip_template = Template(stream.read())
 
     tiab_entrypoint_configmap_resource = yaml.load(tiab_entrypoint_configmap_template.render(
-        TAG_PLACEHOLDER = tag
+        TAG_PLACEHOLDER = tag,
+        EXTRAS_COMMANDS_PLACEHOLDER = extras_cmd
     ))
 
     try:
