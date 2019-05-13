@@ -255,7 +255,7 @@ healthy = True
 
 if __name__ == '__main__':
     try:
-        opts = getopt(sys.argv[1:], 'i:t:k:c:n:o:x:e:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'namespace=', 'output=', 'ixis=', 'extras_cmd=','debug'])
+        opts = getopt(sys.argv[1:], 'i:t:k:c:n:o:x:e:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'namespace=', 'output=', 'ixis=', 'extras=','debug'])
         parse_opts(opts[0])
     except:
         usage()
