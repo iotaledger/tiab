@@ -326,17 +326,17 @@ if __name__ == '__main__':
 
         iri_container = [e for e in iri_pod_resource['spec']['containers'] if e['name'] == 'iri'][0]
 
-        if 'iri_args' in properties:
-            if type(properties.get('iri_args')) is list:
-                iri_container['args'] = properties.get('iri_args')
-            else:
-                raise RuntimeError('iri_args for node %s is not an array' % node)
+        iri_args = properties.get('iri_args')
+        if type(iri_args) is list:
+            iri_container['args'] = iri_args
+        elif iri_args is not None:
+            raise RuntimeError('iri_args for node %s is not an array' % node)
 
-        if 'java_options' in properties:
-            if type(properties.get('java_options', None)) is str:
-                [e for e in iri_container['env'] if e['name'] == 'JAVA_OPTIONS'][0]['value'] = properties.get('java_options')
-            else:
-                raise RuntimeError('java_options for node %s is not a string' % node)
+        java_options = properties.get('java_options')
+        if type(java_options) is str:
+            [e for e in iri_container['env'] if e['name'] == 'JAVA_OPTIONS'][0]['value'] = java_options
+        elif iri_args is not None:
+            raise RuntimeError('java_options for node %s is not a string' % node)
 
         print_message("Deploying %s" % node)
         iri_pod = kubernetes_client.create_namespaced_pod(namespace, iri_pod_resource, pretty = True)
@@ -382,6 +382,7 @@ if __name__ == '__main__':
                 if host in cluster['nodes'].keys():
                     host = cluster['nodes'][host]['podip']
                 add_node_neighbor(cluster['nodes'][node], protocol, host, port)
+
 
     if healthy:
         success(output, cluster)
