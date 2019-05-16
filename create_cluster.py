@@ -134,7 +134,8 @@ def make_tarfile(source_dir):
         return tar_buffer.read()
 
 def upload_ixi_modules(kubernetes_client, node):
-    upload_command = ['tar', 'zxvf', '-', '-C', '/iri/data/ixi']
+    # This command will extract the uploaded archive, making also sure the extracted directory name is stripped from the .ixi suffix.
+    upload_command = ['tar', 'zxvf', '-', '-C', '/iri/data/ixi', '--transform', 's/.ixi//']
     wait_until_pod_running(kubernetes_client, namespace, node['podname'])
     kubernetes.stream.stream(kubernetes_client.connect_get_namespaced_pod_exec,
                               node['podname'],
