@@ -59,11 +59,11 @@ services_names = [ e.metadata.name for e in services.items ]
 cms_names = [ e.metadata.name for e in cms.items ]
 
 for pod_name in pods_names:
-    kubernetes_client.delete_namespaced_pod(pod_name, namespace, kubernetes.client.V1DeleteOptions())
+    kubernetes_client.delete_namespaced_pod(pod_name, namespace)
 
 for service_name in services_names:
-    kubernetes_client.delete_namespaced_service(service_name, namespace, kubernetes.client.V1DeleteOptions())
+    kubernetes_client.delete_namespaced_service(service_name, namespace)
 
 for cm_name in cms_names:
-    kubernetes_client.delete_namespaced_config_map(cm_name, namespace, kubernetes.client.V1DeleteOptions())
+    kubernetes_client.delete_namespaced_config_map(cm_name, namespace)
 

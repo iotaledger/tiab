@@ -16,6 +16,7 @@ from uuid import uuid4
 from getopt import getopt
 from jinja2 import Template
 from tempfile import TemporaryFile
+from functools import reduce
 
 api_headers = {
                 'X-IOTA-API-Version': '1',
@@ -48,11 +49,12 @@ def usage():
                 # -n / --namespace          Kubernetes namespace to use for your cluster deployment
                 # -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
                 # -x / --ixis               Base path for IXI modules to be specified in cluster configuration
+                # -e / --extras             Additional commands to be run at pod creation
                 # -d / --debug              print debug information
         ''' % __file__)
 
 def parse_opts(opts):
-    global docker_image, tag, kubeconfig, cluster, output, debug, namespace, ixis_path
+    global docker_image, tag, kubeconfig, cluster, output, debug, namespace, ixis_path, extras_cmd
     if len(opts[0]) == 0:
         usage()
     for (key, value) in opts:
@@ -70,6 +72,8 @@ def parse_opts(opts):
             namespace = value
         elif key == '-x' or key == '--ixis':
             ixis_path = value
+        elif key == '-e' or key == '--extras':
+            extras_cmd = value
         elif key == '-d' or key == '--debug':
             debug = True
         else:
@@ -201,8 +205,8 @@ def deploy_monitoring(kubernetes_client, cluster):
         cluster['nodes'][node]['tanglescope_clusterip_ports'] = { p.name: p.port for p in clusterip.spec.ports }
 
     prometheus_config = prometheus_config_template.render(
-        iri_targets = [ properties['clusterip'] for (_, properties) in cluster['nodes'].iteritems() ],
-        tanglescope_targets = [ properties['tanglescope_clusterip'] for (_, properties) in cluster['nodes'].iteritems() ]
+        iri_targets = [ properties['clusterip'] for (_, properties) in cluster['nodes'].items() ],
+        tanglescope_targets = [ properties['tanglescope_clusterip'] for (_, properties) in cluster['nodes'].items() ]
     )
     prometheus_configmap_resource = yaml.load(prometheus_configmap_template.render(
         TAG_PLACEHOLDER = tag
@@ -250,10 +254,11 @@ cluster = None
 output = None
 ixis_path = os.getcwd()
 healthy = True
+extras_cmd = None
 
 if __name__ == '__main__':
     try:
-        opts = getopt(sys.argv[1:], 'i:t:k:c:n:o:x:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'namespace=', 'output=', 'ixis=', 'debug'])
+        opts = getopt(sys.argv[1:], 'i:t:k:c:n:o:x:e:d', ['image=', 'tag=', 'kubeconfig=', 'cluster=', 'namespace=', 'output=', 'ixis=', 'extras=','debug'])
         parse_opts(opts[0])
     except:
         usage()
@@ -282,7 +287,8 @@ if __name__ == '__main__':
         iri_clusterip_template = Template(stream.read())
 
     tiab_entrypoint_configmap_resource = yaml.load(tiab_entrypoint_configmap_template.render(
-        TAG_PLACEHOLDER = tag
+        TAG_PLACEHOLDER = tag,
+        EXTRAS_COMMANDS_PLACEHOLDER = extras_cmd if extras_cmd else ''
     ))
 
     try:
@@ -292,7 +298,7 @@ if __name__ == '__main__':
 
     http_url_regex = re.compile('https?://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]')
 
-    for (node, properties) in cluster['nodes'].iteritems():
+    for (node, properties) in cluster['nodes'].items():
         node_uuid = str(uuid4())
         iri_service_resource = yaml.load(iri_service_template.render(
             TAG_PLACEHOLDER = tag,
@@ -305,37 +311,33 @@ if __name__ == '__main__':
             NODE_UUID_PLACEHOLDER = node_uuid
         ))
 
-        cluster['nodes'][node]['upload_ixis_paths'] = filter(lambda path: not http_url_regex.match(path), properties['ixis']) if properties.has_key('ixis') else []
+        cluster['nodes'][node]['upload_ixis_paths'] = filter(lambda path: not http_url_regex.match(path), properties['ixis']) if 'ixis' in properties else []
 
         iri_pod_resource = yaml.load(iri_pod_template.render(
             TAG_PLACEHOLDER = tag,
             IRI_IMAGE_PLACEHOLDER = docker_image,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
-            IRI_DB_URL_PLACEHOLDER = properties['db'] if properties.has_key('db') else '',
-            IRI_DB_CHECKSUM_PLACEHOLDER = properties['db_checksum'] if properties.has_key('db_checksum') else '',
+            IRI_DB_URL_PLACEHOLDER = properties['db'] if 'db' in properties else '',
+            IRI_DB_CHECKSUM_PLACEHOLDER = properties['db_checksum'] if 'db_checksum' in properties else '',
             # Pass only the IXI modules that are downloaded URLs
-            IXI_URLS_PLACEHOLDER = ' '.join(filter(http_url_regex.match, properties['ixis'])) if properties.has_key('ixis') else '',
+            IXI_URLS_PLACEHOLDER = ' '.join(filter(http_url_regex.match, properties['ixis'])) if 'ixis' in properties else '',
             NODE_UUID_PLACEHOLDER = node_uuid,
             LOCAL_IXIS_PLACEHOLDER = 'xyes' if cluster['nodes'][node]['upload_ixis_paths'] else 'xno'
         ))
 
         iri_container = [e for e in iri_pod_resource['spec']['containers'] if e['name'] == 'iri'][0]
 
-        try:
-            if type(properties['iri_args']) is list:
-                iri_container['args'] = properties['iri_args']
-            else:
-                raise RuntimeError('iri_args for node %s is not an array' % node)
-        except KeyError as e:
-            if e[0] != 'iri_args': raise e
+        iri_args = properties.get('iri_args')
+        if type(iri_args) is list:
+            iri_container['args'] = iri_args
+        elif iri_args is not None:
+            raise RuntimeError('iri_args for node %s is not an array' % node)
 
-        try:
-            if type(properties['java_options']) is str:
-                [e for e in iri_container['env'] if e['name'] == 'JAVA_OPTIONS'][0]['value'] = properties['java_options']
-            else:
-                raise RuntimeError('java_options for node %s is not a string' % node)
-        except KeyError as e:
-            if e[0] != 'java_options': raise e
+        java_options = properties.get('java_options')
+        if type(java_options) is str:
+            [e for e in iri_container['env'] if e['name'] == 'JAVA_OPTIONS'][0]['value'] = java_options
+        elif java_options is not None:
+            raise RuntimeError('java_options for node %s is not a string' % node)
 
         print_message("Deploying %s" % node)
         iri_pod = kubernetes_client.create_namespaced_pod(namespace, iri_pod_resource, pretty = True)
@@ -372,8 +374,8 @@ if __name__ == '__main__':
             cluster['nodes'][node]['log'] = kubernetes_client.read_namespaced_pod_log(cluster['nodes'][node]['podname'], namespace, pretty = True)
 
     for node in cluster['nodes'].keys():
-        try:
-            for neighbor in cluster['nodes'][node]['neighbors']:
+        if 'neighbors' in cluster['nodes'][node]:
+            for neighbor in cluster['nodes'][node].get('neighbors'):
                 m = re.match('^([a-z]+?)://([^:]+?):(\d+)$', neighbor)
                 protocol = m.group(1)
                 host = m.group(2)
@@ -381,8 +383,7 @@ if __name__ == '__main__':
                 if host in cluster['nodes'].keys():
                     host = cluster['nodes'][host]['podip']
                 add_node_neighbor(cluster['nodes'][node], protocol, host, port)
-        except KeyError as e:
-            if e[0] != 'neighbors': raise e
+
 
     if healthy:
         success(output, cluster)
