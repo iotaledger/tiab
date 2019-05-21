@@ -335,7 +335,7 @@ if __name__ == '__main__':
         java_options = properties.get('java_options')
         if type(java_options) is str:
             [e for e in iri_container['env'] if e['name'] == 'JAVA_OPTIONS'][0]['value'] = java_options
-        elif iri_args is not None:
+        elif java_options is not None:
             raise RuntimeError('java_options for node %s is not a string' % node)
 
         print_message("Deploying %s" % node)
