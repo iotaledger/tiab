@@ -185,15 +185,15 @@ def deploy_monitoring(kubernetes_client, cluster):
         tanglescope_configmap_resource = yaml.load(tanglescope_configmap_template.render(
             TAG_PLACEHOLDER = tag,
             NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
-        ))
+        ), Loader = yaml.SafeLoader)
         tanglescope_pod_resource = yaml.load(tanglescope_pod_template.render(
             TAG_PLACEHOLDER = tag,
             NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
-        ))
+        ), Loader = yaml.SafeLoader)
         tanglescope_clusterip_resource = yaml.load(tanglescope_clusterip_template.render(
             TAG_PLACEHOLDER = tag,
             NODE_UUID_PLACEHOLDER = cluster['nodes'][node]['uuid']
-        ))
+        ), Loader = yaml.SafeLoader)
         tanglescope_configmap_resource['data']['tanglescope.yml'] = tanglescope_config
         kubernetes_client.create_namespaced_config_map(namespace, tanglescope_configmap_resource, pretty = True)
         pod = kubernetes_client.create_namespaced_pod(namespace, tanglescope_pod_resource, pretty = True)
@@ -210,13 +210,13 @@ def deploy_monitoring(kubernetes_client, cluster):
     )
     prometheus_configmap_resource = yaml.load(prometheus_configmap_template.render(
         TAG_PLACEHOLDER = tag
-    ))
+    ), Loader = yaml.SafeLoader)
     prometheus_grafana_pod_resource = yaml.load(prometheus_grafana_pod_template.render(
         TAG_PLACEHOLDER = tag
-    ))
+    ), Loader = yaml.SafeLoader)
     prometheus_grafana_service_resource = yaml.load(prometheus_grafana_service_template.render(
         TAG_PLACEHOLDER = tag
-    ))
+    ), Loader = yaml.SafeLoader)
     prometheus_configmap_resource['data']['prometheus.yml'] = prometheus_config
     kubernetes_client.create_namespaced_config_map(namespace, prometheus_configmap_resource, pretty = True)
     pod = kubernetes_client.create_namespaced_pod(namespace, prometheus_grafana_pod_resource, pretty = True)
@@ -265,7 +265,7 @@ if __name__ == '__main__':
 
     with open(cluster, 'r') as stream:
         try:
-            cluster = yaml.load(stream)
+            cluster = yaml.load(stream, Loader = yaml.SafeLoader)
         except yaml.YAMLError as e:
             die(e)
     try:
@@ -289,7 +289,7 @@ if __name__ == '__main__':
     tiab_entrypoint_configmap_resource = yaml.load(tiab_entrypoint_configmap_template.render(
         TAG_PLACEHOLDER = tag,
         EXTRAS_COMMANDS_PLACEHOLDER = extras_cmd if extras_cmd else ''
-    ))
+    ), Loader = yaml.SafeLoader)
 
     try:
         kubernetes_client.create_namespaced_config_map(namespace, tiab_entrypoint_configmap_resource, pretty = True)
@@ -304,12 +304,12 @@ if __name__ == '__main__':
             TAG_PLACEHOLDER = tag,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             NODE_UUID_PLACEHOLDER = node_uuid
-        ))
+        ), Loader = yaml.SafeLoader)
         iri_clusterip_resource = yaml.load(iri_clusterip_template.render(
             TAG_PLACEHOLDER = tag,
             NODE_NUMBER_PLACEHOLDER = node.lower(),
             NODE_UUID_PLACEHOLDER = node_uuid
-        ))
+        ), Loader = yaml.SafeLoader)
 
         cluster['nodes'][node]['upload_ixis_paths'] = filter(lambda path: not http_url_regex.match(path), properties['ixis']) if 'ixis' in properties else []
 
@@ -323,7 +323,7 @@ if __name__ == '__main__':
             IXI_URLS_PLACEHOLDER = ' '.join(filter(http_url_regex.match, properties['ixis'])) if 'ixis' in properties else '',
             NODE_UUID_PLACEHOLDER = node_uuid,
             LOCAL_IXIS_PLACEHOLDER = 'xyes' if cluster['nodes'][node]['upload_ixis_paths'] else 'xno'
-        ))
+        ), Loader = yaml.SafeLoader)
 
         iri_container = [e for e in iri_pod_resource['spec']['containers'] if e['name'] == 'iri'][0]
 
