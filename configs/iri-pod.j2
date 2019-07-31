@@ -61,6 +61,10 @@ spec:
         - containerPort: 5556
         # JProfiler
         - containerPort: 8849
+      securityContext:
+        capabilities:
+          add:
+            - NET_ADMIN
   volumes:
     - name: tiab-entrypoint
       configMap:
