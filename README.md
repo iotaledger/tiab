@@ -27,6 +27,7 @@ $ pip install -r requirements.txt
 -k / --kubeconfig         Path of the kubectl config file to access the K8S cluster
 -n / --namespace          Kubernetes namespace you want to deploy the cluster to
 -x / --ixis               Base path for IXI modules to be specified in cluster configuration, defaults to CWD
+-e / --extras             Additional commands to be run at pod creation
 -d / --debug              print debug information
 ```
 
@@ -76,8 +77,14 @@ You can easily destroy all the resources associated to the cluster you just crea
 $ ./teardown_cluster.py --tag 1.5.3-deployment
 ```
 
+## Extra commands at Cluster startup
+
+If you need to execute a bunch of extra commands before each node starts you can run `create_cluster.py` with the `-e|--extras` command line or define an `extra_commands:` entry in the top level of the cluster definition yaml file.
+Please note that these two ways of specifying commands are not mutually exclusive: they are instead additive, both commands will be executed, one after the other.
+Also please note that the specified commands will be executed in bash context: so you can use any sort of bash magic you want (`>`, `&`, and alike).
+
 ## Monitoring capabilities (Alpha)
 
-If the `config.yml` file includes a `monitoring: True` entry, a twin [tanglescope](https://github.com/iotaledger/entangled) pod will be deployed along every IRI node. Tanglescope wil be responsible to obtain any sort of metrics on the node and serve them to a central Grafana Pod, using Prometheus as a database backend.
+If the `config.yml` file includes a `monitoring: True` entry at top level, a twin [tanglescope](https://github.com/iotaledger/entangled) pod will be deployed along every IRI node. Tanglescope wil be responsible to obtain any sort of metrics on the node and serve them to a central Grafana Pod, using Prometheus as a database backend.
 
 
