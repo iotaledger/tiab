@@ -290,7 +290,7 @@ if __name__ == '__main__':
     tiab_entrypoint_configmap_resource = yaml.load(tiab_entrypoint_configmap_template.render(
         TAG_PLACEHOLDER = tag,
         EXTRAS_COMMANDS_PLACEHOLDER = extras_cmd if extras_cmd else '',
-        CONFIG_EXTRAS_COMMANDS_PLACEHOLDER = cluster['extra_commands'] if cluster['extra_commands'] else ''
+        CONFIG_EXTRAS_COMMANDS_PLACEHOLDER = cluster['extra_commands'] if 'extra_commands' in cluster else ''
     ), Loader = yaml.SafeLoader)
 
     try:
