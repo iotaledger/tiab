@@ -63,5 +63,6 @@ data:
     {{ EXTRAS_COMMANDS_PLACEHOLDER }}
     {{ CONFIG_EXTRAS_COMMANDS_PLACEHOLDER }}
 
-    /entrypoint.sh "$@"
+    /bin/bash -l -c "/entrypoint.sh $*"
 
+    sleep 30
