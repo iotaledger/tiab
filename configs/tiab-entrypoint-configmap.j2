@@ -22,6 +22,7 @@ data:
       rm -rf /iri/data/spamnet*
       rm -rf /iri/data/testnet*
       rm -rf /iri/data/mainnet*
+      rm -rf /iri/data/localsnapshots* 
 
       ADDRESSES_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'spent-addresses-db/' | grep -E '^d'  | awk '{print $6}')
       STRIP_COMPONENTS=$(echo $ADDRESSES_ARCHIVE_SUBPATH | awk -F '/' '{print NF-2}')
@@ -42,6 +43,11 @@ data:
       SNAPSHOT_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'snapshot.' | awk '{print $6}')
       SNAPSHOT_STRIP_COMPONENTS=$(echo $SNAPSHOT_ARCHIVE_SUBPATH | awk -F'/' '{print NF-1}')
       tar xfv /tmp/db.tar --strip-components=$SNAPSHOT_STRIP_COMPONENTS -C /iri/data $SNAPSHOT_ARCHIVE_SUBPATH
+
+      LOCAL_SNAPSHOTS_ARCHIVE_SUBPATH=$(tar tfv /tmp/db.tar | grep -F 'localsnapshots' | awk '{print $6}')   
+      STRIP_COMPONENTS=$(echo $LOCAL_SNAPSHOTS_ARCHIVE_SUBPATH | awk -F '/' '{print NF-2}')
+      tar xfv /tmp/db.tar --strip-components=$STRIP_COMPONENTS -C /iri/data $LOCAL_SNAPSHOTS_ARCHIVE_SUBPATH
+
     fi
 
     for ixi_url in $IXI_URLS; do
