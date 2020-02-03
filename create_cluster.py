@@ -376,13 +376,15 @@ if __name__ == '__main__':
             cluster['nodes'][node]['log'] = kubernetes_client.read_namespaced_pod_log(cluster['nodes'][node]['podname'], namespace, pretty = True)
 
     for node in cluster['nodes'].keys():
-        if 'neighbors' in cluster['nodes'][node]:
+        if 'neighbors' in cluster['nodes'][node] and cluster['nodes'][node]['status'] == 'Running':
             for neighbor in cluster['nodes'][node].get('neighbors'):
                 m = re.match('^([a-z]+?)://([^:]+?):(\d+)$', neighbor)
                 protocol = m.group(1)
                 host = m.group(2)
                 port = m.group(3)
                 if host in cluster['nodes'].keys():
+                    if not cluster['nodes'][host]['status'] == 'Running':
+                        continue
                     host = cluster['nodes'][host]['podip']
                 add_node_neighbor(cluster['nodes'][node], protocol, host, port)
 
