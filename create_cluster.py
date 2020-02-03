@@ -365,7 +365,7 @@ if __name__ == '__main__':
             if cluster['nodes'][node]['upload_ixis_paths']:
                 upload_ixi_modules(kubernetes_client, cluster['nodes'][node])
             pod = wait_until_pod_ready(kubernetes_client, namespace, cluster['nodes'][node]['podname'])
-        except RuntimeError:
+        except Exception:
             healthy = False
             cluster['nodes'][node]['status'] = 'Error'
         else:
